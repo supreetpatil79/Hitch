@@ -556,9 +556,9 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
             <h1 className="font-display text-5xl lg:text-6xl italic text-hitchOrange leading-tight">with people.</h1>
           </div>
 
-          {/* Crisp 3-4 word subtitle replacing verbose paragraph */}
+          {/* Hero Subtitle */}
           <p className="text-zinc-500 text-lg font-medium tracking-tight">
-            Same-day intercity crowd-shipping.
+            Shipping your item at insanely low prices &amp; fast as possible.
           </p>
 
           <div className="flex items-center gap-3">
