@@ -1,23 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #FAFAF8;
-  color: #09090B;
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background-color: #FAFAF8;
+    color: #09090B;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(9,9,11,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(9,9,11,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 1;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
 }
 
-/* Subtle background grid pattern overlay */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-image: radial-gradient(#E4E4E7 1px, transparent 1px);
-  background-size: 24px 24px;
-  pointer-events: none;
-  opacity: 0.5;
-  z-index: -1;
+@layer utilities {
+  .font-display { font-family: 'Instrument Serif', serif; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.25s ease-out both; }
+
+@keyframes radarExpand {
+  0%   { transform: scale(0.15); opacity: 0.9; }
+  100% { transform: scale(1);    opacity: 0; }
+}
+.animate-radar-1 { animation: radarExpand 2.8s ease-out infinite 0s; }
+.animate-radar-2 { animation: radarExpand 2.8s ease-out infinite 0.7s; }
+.animate-radar-3 { animation: radarExpand 2.8s ease-out infinite 1.4s; }
+.animate-radar-4 { animation: radarExpand 2.8s ease-out infinite 2.1s; }
+
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-sweep { animation: radarSweep 3s linear infinite; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.animate-pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
