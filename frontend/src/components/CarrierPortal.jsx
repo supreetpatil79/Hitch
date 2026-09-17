@@ -35,12 +35,6 @@ const TESTIMONIALS = [
     author: "Karthik R.",
     initials: "KR",
     route: "BLR → HYD"
-  },
-  {
-    quote: "On my weekly Mumbai to Pune expressway drives, I easily monetize trunk space without any detour.",
-    author: "Ananya M.",
-    initials: "AM",
-    route: "MUM → PNQ"
   }
 ];
 
@@ -60,7 +54,7 @@ const TRANSPORT_MODES = [
 
 const CATEGORIES = ["Documents", "Clothing", "Electronics", "Food", "Medicine", "Fragile", "Other"];
 
-// Interactive Animated Route Visualizer Component matching HopDrop exactly!
+// Interactive Animated Route Visualizer Component
 function RoutePreviewIllustration({ mode, origin, destination }) {
   const org = origin || "Bengaluru";
   const dst = destination || "Mumbai";
@@ -85,9 +79,7 @@ function RoutePreviewIllustration({ mode, origin, destination }) {
           </div>
         </div>
 
-        {/* SVG Railway Track Visual */}
         <div className="relative h-44 bg-zinc-50/50 rounded-xl border border-zinc-100 p-3 flex flex-col justify-between overflow-hidden">
-          {/* Top landmarks */}
           <div className="flex justify-between items-start z-10 px-6">
             <div className="flex flex-col items-center">
               <div className="w-10 h-8 bg-zinc-200/80 rounded flex items-center justify-center text-zinc-600 shadow-sm">
@@ -96,7 +88,7 @@ function RoutePreviewIllustration({ mode, origin, destination }) {
               <span className="text-[9px] font-bold text-zinc-500 mt-1 bg-white px-1.5 py-0.5 rounded shadow-xs">Vidhana Soudha</span>
             </div>
 
-            <div className="bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-full px-3 py-1 shadow-xs flex items-center gap-2">
+            <div className="bg-white/90 border border-zinc-200 rounded-full px-3 py-1 shadow-xs flex items-center gap-2">
               <Sparkles className="w-3 h-3 text-amber-500" />
               <span className="text-[11px] font-bold text-zinc-800">1,082 km</span>
               <span className="text-[10px] text-zinc-400">· ~16.6h · Vande Bharat</span>
@@ -110,12 +102,10 @@ function RoutePreviewIllustration({ mode, origin, destination }) {
             </div>
           </div>
 
-          {/* Curved Track Canvas / SVG */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <svg className="w-full h-full" viewBox="0 0 500 160" fill="none">
               <path d="M 50 130 Q 250 30 450 130" stroke="#CBD5E1" strokeWidth="12" strokeLinecap="round" />
               <path d="M 50 130 Q 250 30 450 130" stroke="#475569" strokeWidth="4" strokeDasharray="6 8" />
-              {/* Train element positioned along the track */}
               <g transform="translate(230, 48) rotate(4)">
                 <rect x="0" y="0" width="55" height="14" rx="4" fill="#0284C7" />
                 <rect x="42" y="2" width="10" height="10" rx="2" fill="#38BDF8" />
@@ -126,7 +116,6 @@ function RoutePreviewIllustration({ mode, origin, destination }) {
             </svg>
           </div>
 
-          {/* Bottom Stations & Badges */}
           <div className="flex justify-between items-end z-10 px-4">
             <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -155,11 +144,8 @@ function RoutePreviewIllustration({ mode, origin, destination }) {
           </div>
         </div>
 
-        {/* Footer features */}
         <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1">
-          <span className="flex items-center gap-1">
-            <Navigation className="w-3 h-3 text-zinc-400" /> Dedicated electrified railway corridor with zero traffic
-          </span>
+          <span>Dedicated electrified railway corridor with zero traffic</span>
           <div className="flex items-center gap-3">
             <span className="text-emerald-700 font-medium">✓ RBI ₹10 Serial Tamper-Sealed</span>
             <span className="text-amber-700 font-medium">⚡ Sub-50ms Handoff Lock</span>
@@ -431,10 +417,17 @@ function CarrierStepCards({ step }) {
   );
 }
 
-export default function CarrierPortal() {
+export default function CarrierPortal({ shipments, activeShipmentId, onUpdateStatus, onSelectPortal }) {
   const [screen, setScreen] = useState("home"); // home | post | feed | active
   const [wizardStep, setWizardStep] = useState(1);
   const [spareCapacity, setSpareCapacity] = useState(5);
+  const [selectedPkg, setSelectedPkg] = useState(null);
+
+  // OTP inputs for live testing
+  const [pickupOtpInput, setPickupOtpInput] = useState("");
+  const [deliveryOtpInput, setDeliveryOtpInput] = useState("");
+  const [pickupSuccess, setPickupSuccess] = useState(false);
+  const [deliverySuccess, setDeliverySuccess] = useState(false);
 
   const [trip, setTrip] = useState({
     fromCity: "Bengaluru",
@@ -467,6 +460,24 @@ export default function CarrierPortal() {
     }));
   };
 
+  const handleVerifyPickup = (pkg) => {
+    if (pickupOtpInput === "4829" || pickupOtpInput === pkg.pickupOtp) {
+      setPickupSuccess(true);
+      if (onUpdateStatus) onUpdateStatus(pkg.id, "IN_TRANSIT");
+    } else {
+      alert("Invalid Pickup OTP! Please enter 4829.");
+    }
+  };
+
+  const handleVerifyDelivery = (pkg) => {
+    if (deliveryOtpInput === "7104" || deliveryOtpInput === pkg.deliveryOtp) {
+      setDeliverySuccess(true);
+      if (onUpdateStatus) onUpdateStatus(pkg.id, "DELIVERED");
+    } else {
+      alert("Invalid Delivery OTP! Please enter 7104.");
+    }
+  };
+
   // ─── SCREEN 1: LANDING / HOME ──────────────────────────────────────────────
   if (screen === "home") {
     const calculatedEarnings = spareCapacity * 110;
@@ -486,8 +497,8 @@ export default function CarrierPortal() {
               <h1 className="font-display text-5xl lg:text-6xl italic text-hitchBlue leading-tight">Make it earn.</h1>
             </div>
 
-            <p className="text-zinc-500 text-base leading-relaxed max-w-lg">
-              Accept parcels on your existing route. Zero detours. Zero overhead. Every handoff is OTP-secured and every payout is escrow-guaranteed.
+            <p className="text-zinc-500 text-lg font-medium tracking-tight">
+              Monetize spare luggage space. Same-day.
             </p>
 
             <div className="flex items-center gap-3">
@@ -497,7 +508,7 @@ export default function CarrierPortal() {
               </button>
               <button onClick={() => setScreen("feed")}
                 className="px-6 py-3.5 border border-zinc-200 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-50 transition-all text-sm">
-                Browse requests
+                Browse cargo requests ({shipments?.length || 3})
               </button>
             </div>
 
@@ -654,7 +665,6 @@ export default function CarrierPortal() {
   if (screen === "post") {
     return (
       <div className="animate-fadeIn">
-        {/* Page Header */}
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Carrier Workflow</p>
           <h1 className="text-3xl font-bold text-zinc-900">Post a verified delivery route</h1>
@@ -663,7 +673,6 @@ export default function CarrierPortal() {
           </p>
         </div>
 
-        {/* Top 3 Trust Badges */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {TRUST_BADGES.map(b => {
             const Icon = b.icon;
@@ -682,7 +691,6 @@ export default function CarrierPortal() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Wizard Card */}
           <div className="lg:col-span-8">
             <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-7 space-y-6">
               <div>
@@ -717,7 +725,6 @@ export default function CarrierPortal() {
                             placeholder="Search departure city" />
                           <datalist id="carrier-from-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
                         </div>
-                        <p className="text-[10px] text-zinc-400 mt-1">Search and select your departure city.</p>
                       </div>
 
                       <div>
@@ -730,14 +737,12 @@ export default function CarrierPortal() {
                             placeholder="Select destination city" />
                           <datalist id="carrier-to-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
                         </div>
-                        <p className="text-[10px] text-zinc-400 mt-1">Select the city where you can complete the delivery.</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
                     <h3 className="text-base font-bold text-zinc-900 mb-1">Transport mode</h3>
-                    <p className="text-xs text-zinc-500 mb-3">This helps senders understand trust, timing, and handling conditions before they request a match.</p>
                     <div className="grid grid-cols-5 gap-2">
                       {TRANSPORT_MODES.map(({ id, label, icon: Icon }) => (
                         <button key={id} type="button" onClick={() => setTrip({...trip, mode: id})}
@@ -751,72 +756,50 @@ export default function CarrierPortal() {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-base font-bold text-zinc-900">Route preview</h3>
-                      <span className="text-xs text-zinc-400">Distance and duration help you price more accurately</span>
-                    </div>
+                    <h3 className="text-base font-bold text-zinc-900 mb-1">Route preview</h3>
                     <RoutePreviewIllustration mode={trip.mode} origin={trip.fromCity} destination={trip.toCity} />
                   </div>
                 </div>
               )}
 
-              {/* STEP 2: SCHEDULE DETAILS */}
+              {/* STEP 2: SCHEDULE */}
               {wizardStep === 2 && (
                 <div className="space-y-6 animate-fadeIn">
-                  <div>
-                    <h3 className="text-base font-bold text-zinc-900 mb-1">Schedule and trip references</h3>
-                    <p className="text-xs text-zinc-500 mb-4">Clear scheduling improves trust and reduces back-and-forth with senders before acceptance.</p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-[10px] font-bold uppercase text-zinc-500">Departure date and time</label>
-                          <span className="text-[10px] font-bold text-red-500">REQUIRED</span>
-                        </div>
-                        <input type="datetime-local" value={trip.departureDate}
-                          onChange={e => setTrip({...trip, departureDate: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
-                        <p className="text-[10px] text-zinc-400 mt-1">Trips should be scheduled in the future so requests can match correctly.</p>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-[10px] font-bold uppercase text-zinc-500">Estimated arrival</label>
-                          <span className="text-[10px] text-zinc-400">OPTIONAL</span>
-                        </div>
-                        <input type="datetime-local" value={trip.estimatedArrival}
-                          onChange={e => setTrip({...trip, estimatedArrival: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
-                        <p className="text-[10px] text-zinc-400 mt-1">If entered, arrival must be later than the departure time.</p>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Departure Date &amp; Time</label>
+                      <input type="datetime-local" value={trip.departureDate}
+                        onChange={e => setTrip({...trip, departureDate: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Transport name</label>
-                        <input type="text" placeholder="e.g. Rajdhani Express" value={trip.transportName}
-                          onChange={e => setTrip({...trip, transportName: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
-                        <p className="text-[10px] text-zinc-400 mt-1">Shown to senders for trust and context.</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">PNR or booking reference</label>
-                        <input type="text" placeholder="Optional" value={trip.pnr}
-                          onChange={e => setTrip({...trip, pnr: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
-                        <p className="text-[10px] text-zinc-400 mt-1">Helpful for high-trust listings on structured routes.</p>
-                      </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Estimated Arrival</label>
+                      <input type="datetime-local" value={trip.estimatedArrival}
+                        onChange={e => setTrip({...trip, estimatedArrival: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Transport Name</label>
+                      <input type="text" placeholder="e.g. Vande Bharat Express" value={trip.transportName}
+                        onChange={e => setTrip({...trip, transportName: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">PNR / Reference</label>
+                      <input type="text" placeholder="Optional" value={trip.pnr}
+                        onChange={e => setTrip({...trip, pnr: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* STEP 3: CAPACITY & PRICING */}
+              {/* STEP 3: PRICING */}
               {wizardStep === 3 && (
                 <div className="space-y-6 animate-fadeIn">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Sliders */}
                     <div className="space-y-5 bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs">
                       <div>
                         <div className="flex items-center justify-between mb-2">
@@ -826,9 +809,7 @@ export default function CarrierPortal() {
                         <input type="range" min="1" max="25" step="1" value={trip.capacityKg}
                           onChange={e => setTrip({...trip, capacityKg: parseInt(e.target.value)})}
                           className="w-full accent-hitchBlue" />
-                        <p className="text-[10px] text-zinc-400 mt-1">Set the comfortable upper limit, not the best-case maximum. Accurate capacity improves acceptance quality.</p>
                       </div>
-
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-xs font-bold text-zinc-900">Rate per kilogram</label>
@@ -837,141 +818,71 @@ export default function CarrierPortal() {
                         <input type="range" min="30" max="300" step="5" value={trip.pricePerKg}
                           onChange={e => setTrip({...trip, pricePerKg: parseInt(e.target.value)})}
                           className="w-full accent-hitchBlue" />
-                        <p className="text-[10px] text-zinc-400 mt-1">This controls the base sender quote while preserving your existing pricing and payout calculations.</p>
                       </div>
                     </div>
 
-                    {/* Projected Payout Cards */}
                     <div className="space-y-3">
                       <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Projected Payout</p>
-                          <IndianRupee className="w-4 h-4 text-zinc-400" />
-                        </div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Projected Payout</p>
                         <p className="text-2xl font-bold text-zinc-900 mt-1">₹{(trip.capacityKg * trip.pricePerKg).toFixed(2)}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">Based on {trip.capacityKg} kg at the current lane rate.</p>
+                        <p className="text-[10px] text-zinc-400 mt-0.5">Based on {trip.capacityKg} kg at lane rate.</p>
                       </div>
-
                       <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Max Lane Value</p>
-                          <Truck className="w-4 h-4 text-zinc-400" />
-                        </div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Max Lane Value</p>
                         <p className="text-2xl font-bold text-zinc-900 mt-1">₹{(trip.capacityKg * trip.pricePerKg).toFixed(2)}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">If the full listed capacity gets matched at your current rate.</p>
+                        <p className="text-[10px] text-zinc-400 mt-0.5">If full capacity gets matched.</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Rate Assistant Box */}
-                  <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-hitchBlue" />
-                      <p className="text-sm font-bold text-zinc-900">Rate assistant</p>
-                    </div>
-                    <p className="text-xs text-zinc-500">Use live route guidance to anchor your rate without changing the backend pricing model.</p>
-                    <div className="bg-zinc-50 rounded-xl p-4 text-center space-y-2 border border-zinc-100">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 text-hitchBlue flex items-center justify-center mx-auto">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <p className="text-xs font-bold text-zinc-800">Suggested Corridor Benchmark: ₹{trip.pricePerKg}/kg</p>
-                      <p className="text-[10px] text-zinc-400">Manual pricing is enabled. Senders will see your published listing rate.</p>
-                    </div>
-                  </div>
-
-                  {/* Package Categories & Notes */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-900 mb-1">Package categories and handoff notes</h4>
-                      <p className="text-xs text-zinc-500 mb-3">Clear rules reduce negotiation friction and help senders self-select into the right route.</p>
-                      <div className="flex flex-wrap gap-2">
-                        {CATEGORIES.map(cat => (
-                          <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                            className={"px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all " +
-                              (trip.acceptedCats.includes(cat) ? "bg-blue-50 text-hitchBlue border-blue-200 font-bold" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50")}>
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Pickup instructions</label>
-                        <textarea rows={3} value={trip.pickupNotes} onChange={e => setTrip({...trip, pickupNotes: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-hitchBlue/40 resize-none"
-                          placeholder="Example: Platform 3 near coach B2, or airport pickup gate." />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Drop-off instructions</label>
-                        <textarea rows={3} value={trip.dropoffNotes} onChange={e => setTrip({...trip, dropoffNotes: e.target.value})}
-                          className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-hitchBlue/40 resize-none"
-                          placeholder="Optional but useful when the last-mile handoff has access or timing constraints." />
-                      </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-zinc-900 mb-2">Package categories</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORIES.map(cat => (
+                        <button key={cat} type="button" onClick={() => toggleCategory(cat)}
+                          className={"px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all " +
+                            (trip.acceptedCats.includes(cat) ? "bg-blue-50 text-hitchBlue border-blue-200 font-bold" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50")}>
+                          {cat}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* STEP 4: DEPOSIT AND PUBLISH */}
+              {/* STEP 4: PUBLISH */}
               {wizardStep === 4 && (
                 <div className="space-y-6 animate-fadeIn">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Trip Summary Card */}
                     <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-3">
                       <h4 className="text-sm font-bold text-zinc-900">Trip summary</h4>
-                      <p className="text-xs text-zinc-500">Review the live listing details exactly as the current trip payload will publish them.</p>
-
-                      <div className="space-y-2 pt-2 text-xs">
-                        <div className="flex justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                          <span className="text-zinc-500 font-medium">Route</span>
-                          <span className="font-bold text-zinc-900">{trip.fromCity} → {trip.toCity}</span>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between p-2 bg-zinc-50 rounded-lg">
+                          <span className="text-zinc-500">Route</span><span className="font-bold">{trip.fromCity} → {trip.toCity}</span>
                         </div>
-                        <div className="flex justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                          <span className="text-zinc-500 font-medium">Departure</span>
-                          <span className="font-bold text-zinc-900">{trip.departureDate?.replace("T", ", ")}</span>
+                        <div className="flex justify-between p-2 bg-zinc-50 rounded-lg">
+                          <span className="text-zinc-500">Departure</span><span className="font-bold">{trip.departureDate?.replace("T", " ")}</span>
                         </div>
-                        <div className="flex justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                          <span className="text-zinc-500 font-medium">Estimated arrival</span>
-                          <span className="font-bold text-zinc-900">{trip.estimatedArrival?.replace("T", ", ")}</span>
-                        </div>
-                        <div className="flex justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                          <span className="text-zinc-500 font-medium">Transport</span>
-                          <span className="font-bold text-zinc-900 capitalize">{trip.mode} · {trip.transportName}</span>
-                        </div>
-                        <div className="flex justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                          <span className="text-zinc-500 font-medium">Capacity</span>
-                          <span className="font-bold text-zinc-900">{trip.capacityKg} kg</span>
+                        <div className="flex justify-between p-2 bg-zinc-50 rounded-lg">
+                          <span className="text-zinc-500">Transport</span><span className="font-bold capitalize">{trip.mode} · {trip.transportName}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Refundable Deposit Card */}
-                    <div className="space-y-4">
-                      <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-2">
-                        <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                          <Wallet className="w-4 h-4 text-amber-700" />
-                          <span>Refundable carrier deposit</span>
-                        </div>
-                        <p className="text-xs text-amber-800 leading-relaxed">
-                          Rs. 500 stays reserved while the trip is active and is released automatically after successful completion through the existing flow.
-                        </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-2">
+                      <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                        <Wallet className="w-4 h-4 text-amber-700" />
+                        <span>Refundable carrier deposit</span>
                       </div>
-
-                      <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-2 text-xs text-zinc-600">
-                        <p className="font-bold text-zinc-900 flex items-center gap-1.5">
-                          <CheckCircle className="w-4 h-4 text-emerald-500" /> Trust signals included in this listing
-                        </p>
-                        <p className="leading-relaxed">· Pickup and delivery continue to require OTP verification.</p>
-                        <p className="leading-relaxed">· Trip details feed directly into live matching and payout calculations.</p>
-                        <p className="leading-relaxed">· Sender-facing pricing remains consistent with the current backend contract.</p>
-                      </div>
+                      <p className="text-xs text-amber-800">
+                        Rs. 500 stays reserved while active and is released automatically upon successful completion.
+                      </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Navigation buttons */}
+              {/* Navigation */}
               <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
                 {wizardStep > 1
                   ? <button onClick={() => setWizardStep(s => s - 1)} className="text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-all">Back</button>
@@ -991,7 +902,6 @@ export default function CarrierPortal() {
             </div>
           </div>
 
-          {/* Sidebar Snapshot */}
           <div className="lg:col-span-4">
             <div className="sticky top-24">
               <TripSnapshotSidebar step={wizardStep} trip={trip} />
@@ -1002,13 +912,9 @@ export default function CarrierPortal() {
     );
   }
 
-  // ─── SCREEN 3: CARGO FEED ──────────────────────────────────────────────────
+  // ─── SCREEN 3: CARGO FEED (REAL-TIME SYNCED) ───────────────────────────────
   if (screen === "feed") {
-    const matchedPackages = [
-      { id: "PKG-992", from: trip.fromCity, to: trip.toCity, category: "Electronics", weight: 1.5, value: 12000, payout: 180, window: "Today 7–11 AM", sender: "Supreet P." },
-      { id: "PKG-991", from: trip.fromCity, to: trip.toCity, category: "Documents", weight: 0.4, value: 1000, payout: 60, window: "Today 12–4 PM", sender: "Meera J." },
-      { id: "PKG-988", from: trip.fromCity, to: trip.toCity, category: "Medicine", weight: 0.8, value: 3500, payout: 95, window: "Today 4–8 PM", sender: "Amit K." },
-    ];
+    const activeCargoList = (shipments || []).filter(s => s.status !== "DELIVERED");
 
     return (
       <div className="animate-fadeIn space-y-6">
@@ -1018,33 +924,37 @@ export default function CarrierPortal() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Cargo Matching Feed</h1>
-            <p className="text-sm text-zinc-500">{trip.fromCity} → {trip.toCity} · {trip.capacityKg} kg capacity posted</p>
+            <p className="text-sm text-zinc-500">{trip.fromCity} → {trip.toCity} · Real-time synced platform packages</p>
           </div>
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-hitchBlue">
             <CircleDot className="w-4 h-4 animate-pulse" />
-            Trip Listing Active — {matchedPackages.length} parcel requests matching your route
+            Live Corridor Active — {activeCargoList.length} parcel requests matching right now
           </div>
-          <button onClick={() => { setScreen("post"); setWizardStep(1); }} className="text-xs font-bold text-hitchBlue underline">Edit Trip</button>
+          <button onClick={() => { setScreen("post"); setWizardStep(1); }} className="text-xs font-bold text-hitchBlue underline">Post New Trip</button>
         </div>
 
         <div className="space-y-4">
-          {matchedPackages.map(pkg => (
+          {activeCargoList.map(pkg => (
             <div key={pkg.id} className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-lg">{pkg.id}</span>
+                  <span className="text-xs font-mono text-zinc-700 bg-zinc-100 font-bold px-2 py-0.5 rounded-lg">{pkg.id}</span>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">{pkg.category}</span>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">Bedrock ✓ SAFE</span>
+                  {pkg.status === "IN_TRANSIT" && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-hitchOrange border border-orange-200 animate-pulse">
+                      ● IN TRANSIT
+                    </span>
+                  )}
                 </div>
                 <h4 className="text-base font-bold text-zinc-900">{pkg.from} → {pkg.to}</h4>
                 <div className="flex items-center gap-4 text-xs text-zinc-500">
                   <span>Weight: <strong className="text-zinc-800">{pkg.weight} kg</strong></span>
-                  <span>Value: <strong className="text-zinc-800">₹{pkg.value.toLocaleString()}</strong></span>
+                  <span>Value: <strong className="text-zinc-800">₹{pkg.declaredValue}</strong></span>
                   <span>Sender: <strong className="text-zinc-800">{pkg.sender}</strong></span>
-                  <span>Pickup: <strong className="text-zinc-800">{pkg.window}</strong></span>
                 </div>
               </div>
               <div className="flex sm:flex-col items-end justify-between w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-zinc-100 gap-3">
@@ -1052,9 +962,9 @@ export default function CarrierPortal() {
                   <p className="text-xs text-zinc-400">Carrier Payout</p>
                   <p className="text-2xl font-bold text-hitchBlue">₹{pkg.payout}</p>
                 </div>
-                <button onClick={() => setScreen("active")}
+                <button onClick={() => { setSelectedPkg(pkg); setScreen("active"); setPickupSuccess(pkg.status === "IN_TRANSIT"); }}
                   className="px-5 py-2.5 bg-hitchBlue text-white font-semibold rounded-xl hover:bg-hitchBlue-hover shadow-sm transition-all text-xs flex items-center gap-1.5">
-                  Accept Parcel <ArrowRight className="w-3.5 h-3.5" />
+                  {pkg.status === "IN_TRANSIT" ? "View Active Transit" : "Accept Parcel"} <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -1064,8 +974,19 @@ export default function CarrierPortal() {
     );
   }
 
-  // ─── SCREEN 4: ACTIVE DELIVERY EXECUTION ───────────────────────────────────
+  // ─── SCREEN 4: ACTIVE DELIVERY & DUAL OTP HANDSHAKE ────────────────────────
   if (screen === "active") {
+    const pkg = selectedPkg || (shipments && shipments[0]) || {
+      id: "HTX-4821",
+      from: "Bengaluru",
+      to: "Mumbai",
+      payout: 180,
+      pickupOtp: "4829",
+      deliveryOtp: "7104",
+      recipient: "Aarav Sharma",
+      recipientPhone: "+91 98765 43210"
+    };
+
     return (
       <div className="max-w-2xl mx-auto animate-fadeIn space-y-6">
         <div className="flex items-center gap-3">
@@ -1073,39 +994,88 @@ export default function CarrierPortal() {
             <ArrowLeft className="w-4 h-4 text-zinc-500" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Active Delivery &amp; Handshake</h1>
-            <p className="text-sm text-zinc-500">PKG-992 · {trip.fromCity} → {trip.toCity}</p>
+            <h1 className="text-2xl font-bold text-zinc-900">Active Delivery &amp; Real-Time OTP Handshake</h1>
+            <p className="text-sm text-zinc-500">{pkg.id} · {pkg.from} → {pkg.to}</p>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-7 space-y-6">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
             <div>
-              <p className="text-xs font-bold uppercase text-zinc-400">Escrow Locked</p>
-              <p className="text-2xl font-bold text-zinc-900">₹180.00</p>
+              <p className="text-xs font-bold uppercase text-zinc-400">Escrow Locked Payout</p>
+              <p className="text-3xl font-bold text-hitchBlue">₹{pkg.payout}.00</p>
             </div>
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">
-              ● OTP HANDSHAKE ACTIVE
+            <span className={"px-3 py-1 text-xs font-bold rounded-full border " +
+              (deliverySuccess ? "bg-emerald-100 text-emerald-800 border-emerald-300" :
+               pickupSuccess ? "bg-orange-100 text-hitchOrange border-orange-300" :
+               "bg-blue-100 text-hitchBlue border-blue-300")}>
+              {deliverySuccess ? "● DELIVERED · PAYOUT RELEASED" : pickupSuccess ? "● IN TRANSIT" : "● AWAITING PICKUP"}
             </span>
           </div>
 
           <div className="space-y-4">
-            <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200 space-y-2">
-              <p className="text-xs font-bold uppercase text-zinc-400">Step 1: Sender Pickup</p>
-              <p className="text-sm font-semibold text-zinc-900">Ask the sender for their 4-digit Pickup OTP</p>
-              <div className="flex gap-2 pt-1">
-                <input type="text" maxLength={4} placeholder="e.g. 4829" className="px-3 py-2 border border-zinc-300 rounded-xl text-sm font-mono tracking-widest text-center" />
-                <button onClick={() => alert("Pickup verified! Status updated to IN_TRANSIT.")} className="px-4 py-2 bg-hitchBlue text-white text-xs font-bold rounded-xl shadow-xs">Verify Pickup</button>
+            {/* Step 1: Pickup Handshake */}
+            <div className={"rounded-2xl p-5 border transition-all " +
+              (pickupSuccess ? "bg-emerald-50/60 border-emerald-200" : "bg-zinc-50 border-zinc-200")}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Step 1: Origin Pickup Handshake</p>
+                {pickupSuccess && <span className="text-xs font-bold text-emerald-700 flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Picked Up</span>}
               </div>
+              <p className="text-sm font-semibold text-zinc-900">Ask the sender for their 4-digit Pickup OTP</p>
+              <p className="text-xs text-zinc-500 mb-3">Sender's test code is: <strong className="font-mono text-hitchOrange">4829</strong></p>
+
+              {!pickupSuccess ? (
+                <div className="flex gap-2">
+                  <input type="text" maxLength={4} placeholder="Enter 4829" value={pickupOtpInput}
+                    onChange={e => setPickupOtpInput(e.target.value)}
+                    className="px-4 py-2 border border-zinc-300 rounded-xl text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-hitchBlue/40" />
+                  <button onClick={() => handleVerifyPickup(pkg)}
+                    className="px-5 py-2 bg-hitchBlue text-white text-xs font-bold rounded-xl shadow-xs hover:bg-hitchBlue-hover transition-all">
+                    Verify Pickup OTP →
+                  </button>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-white border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600" /> Package secured! Status updated to IN_TRANSIT on both Sender &amp; Carrier portals.
+                </div>
+              )}
             </div>
 
-            <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200 space-y-2">
-              <p className="text-xs font-bold uppercase text-zinc-400">Step 2: Recipient Delivery</p>
-              <p className="text-sm font-semibold text-zinc-900">Ask the recipient for their Delivery OTP upon handoff</p>
-              <div className="flex gap-2 pt-1">
-                <input type="text" maxLength={4} placeholder="e.g. 7104" className="px-3 py-2 border border-zinc-300 rounded-xl text-sm font-mono tracking-widest text-center" />
-                <button onClick={() => alert("Delivery verified! Escrow payout of ₹180 released to your wallet.")} className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-xs">Complete &amp; Release Payout</button>
+            {/* Step 2: Delivery Handshake */}
+            <div className={"rounded-2xl p-5 border transition-all " +
+              (deliverySuccess ? "bg-emerald-50/60 border-emerald-200" :
+               !pickupSuccess ? "bg-zinc-50 border-zinc-200 opacity-60 pointer-events-none" :
+               "bg-zinc-50 border-zinc-200")}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Step 2: Destination Delivery Handshake</p>
+                {deliverySuccess && <span className="text-xs font-bold text-emerald-700 flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Completed</span>}
               </div>
+              <p className="text-sm font-semibold text-zinc-900">Ask recipient ({pkg.recipient || "Aarav Sharma"}) for the Delivery OTP</p>
+              <p className="text-xs text-zinc-500 mb-3">Recipient's test code is: <strong className="font-mono text-emerald-600">7104</strong></p>
+
+              {!deliverySuccess ? (
+                <div className="flex gap-2">
+                  <input type="text" maxLength={4} placeholder="Enter 7104" value={deliveryOtpInput}
+                    onChange={e => setDeliveryOtpInput(e.target.value)}
+                    className="px-4 py-2 border border-zinc-300 rounded-xl text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+                  <button onClick={() => handleVerifyDelivery(pkg)}
+                    className="px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-emerald-700 transition-all">
+                    Confirm Delivery &amp; Release Escrow
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 bg-white border border-emerald-200 rounded-xl space-y-2">
+                  <div className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    Delivery Completed! Payout of ₹{pkg.payout}.00 released to your wallet.
+                  </div>
+                  <p className="text-xs text-zinc-500">The delivery lifecycle has closed in Step Functions. You can now switch to the Sender Portal to verify the real-time update!</p>
+                  <button onClick={() => onSelectPortal && onSelectPortal("sender")}
+                    className="mt-2 px-4 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 transition-all">
+                    View Sender Portal Status →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

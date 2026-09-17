@@ -5,13 +5,83 @@ import CarrierPortal from "./components/CarrierPortal";
 import AdminPortal from "./components/AdminPortal";
 
 const PORTALS = [
-  { id: "sender",  label: "Sender Portal",  icon: Package,  accent: "bg-hitchOrange text-white",  tag: "hitch-orange" },
-  { id: "carrier", label: "Carrier Portal",  icon: Truck,    accent: "bg-hitchBlue text-white",    tag: "hitch-blue" },
-  { id: "admin",   label: "Admin Dashboard", icon: BarChart3, accent: "bg-zinc-900 text-white",    tag: "admin" },
+  { id: "sender",  label: "Sender Portal",   icon: Package,   accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
+  { id: "carrier", label: "Carrier Portal",  icon: Truck,     accent: "bg-hitchBlue text-white",   tag: "hitch-blue" },
+  { id: "admin",   label: "Admin Dashboard", icon: BarChart3, accent: "bg-zinc-900 text-white",   tag: "admin" },
+];
+
+const INITIAL_SHIPMENTS = [
+  {
+    id: "HTX-4821",
+    from: "Bengaluru",
+    to: "Mumbai",
+    category: "Electronics",
+    weight: 2.0,
+    declaredValue: "12000",
+    payout: 180,
+    status: "MATCHED",
+    pickupOtp: "4829",
+    deliveryOtp: "7104",
+    banknoteSerial: "5AC 123456",
+    sender: "Supreet P.",
+    recipient: "Aarav Sharma",
+    recipientPhone: "+91 98765 43210",
+    eta: "Today 6:30 PM",
+    carrier: "Rahul V."
+  },
+  {
+    id: "HTX-4755",
+    from: "Bengaluru",
+    to: "Hyderabad",
+    category: "Documents",
+    weight: 0.8,
+    declaredValue: "2500",
+    payout: 80,
+    status: "MATCHED",
+    pickupOtp: "3319",
+    deliveryOtp: "8821",
+    banknoteSerial: "7LK 901234",
+    sender: "Meera J.",
+    recipient: "Priya S.",
+    recipientPhone: "+91 91234 56789",
+    eta: "Today 4:00 PM",
+    carrier: "Priya S."
+  },
+  {
+    id: "HTX-4710",
+    from: "Delhi",
+    to: "Chandigarh",
+    category: "Medicine",
+    weight: 1.2,
+    declaredValue: "4500",
+    payout: 120,
+    status: "DELIVERED",
+    pickupOtp: "1102",
+    deliveryOtp: "9940",
+    banknoteSerial: "2XY 445566",
+    sender: "Amit K.",
+    recipient: "Vikram R.",
+    recipientPhone: "+91 98111 22334",
+    eta: "Delivered",
+    carrier: "Amit K."
+  }
 ];
 
 export default function App() {
   const [portal, setPortal] = useState("sender");
+  const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
+  const [activeShipmentId, setActiveShipmentId] = useState("HTX-4821");
+
+  // Add new shipment from Sender Portal
+  const handleAddShipment = (newPkg) => {
+    setShipments(prev => [newPkg, ...prev]);
+    setActiveShipmentId(newPkg.id);
+  };
+
+  // Update shipment status (e.g. MATCHED -> IN_TRANSIT -> DELIVERED)
+  const handleUpdateStatus = (id, newStatus) => {
+    setShipments(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -61,11 +131,29 @@ export default function App() {
         </div>
       </header>
 
-      {/* Portal Content */}
+      {/* Portal Content with Shared Real-Time State */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {portal === "sender"  && <SenderPortal />}
-        {portal === "carrier" && <CarrierPortal />}
-        {portal === "admin"   && <AdminPortal />}
+        {portal === "sender"  && (
+          <SenderPortal
+            shipments={shipments}
+            activeShipmentId={activeShipmentId}
+            onAddShipment={handleAddShipment}
+            onSelectPortal={setPortal}
+          />
+        )}
+        {portal === "carrier" && (
+          <CarrierPortal
+            shipments={shipments}
+            activeShipmentId={activeShipmentId}
+            onUpdateStatus={handleUpdateStatus}
+            onSelectPortal={setPortal}
+          />
+        )}
+        {portal === "admin"   && (
+          <AdminPortal
+            shipments={shipments}
+          />
+        )}
       </main>
 
       {/* Footer */}

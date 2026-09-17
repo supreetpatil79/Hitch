@@ -9,7 +9,7 @@ import {
   Tag, Sliders, Image as ImageIcon
 } from "lucide-react";
 
-const CITIES = ["Mumbai","Pune","Delhi","Bengaluru","Hyderabad","Chennai",
+const CITIES = ["Bengaluru","Mumbai","Hyderabad","Delhi","Pune","Chennai",
                 "Kolkata","Ahmedabad","Jaipur","Surat","Kochi","Chandigarh",
                 "Nagpur","Indore","Bhopal","Patna","Lucknow","Agra"];
 
@@ -38,6 +38,13 @@ const HOW_IT_WORKS = [
   { n:"03", title:"OTP-secured handoff",     icon: Shield,        desc:"Carrier receives the parcel only after verifying your 6-digit Pickup OTP. Zero trust." },
   { n:"04", title:"Delivered. Escrow released.", icon: CheckCircle2, desc:"Recipient confirms with the Delivery OTP. Payment is released automatically. Done." },
 ];
+
+const STATUS_STYLE = {
+  SEARCHING_RADAR: "bg-amber-100 text-amber-800 border-amber-300",
+  MATCHED:         "bg-blue-100 text-blue-800 border-blue-300",
+  IN_TRANSIT:      "bg-hitchOrange/15 text-hitchOrange border-hitchOrange/40",
+  DELIVERED:       "bg-emerald-100 text-emerald-800 border-emerald-300",
+};
 
 // Live ticker
 function LiveTicker() {
@@ -75,14 +82,14 @@ function LiveTicker() {
 }
 
 // Regulatory Shipping Label Modal (Printable)
-function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
+function RegulatoryLabelModal({ isOpen, onClose, form, trackingId }) {
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const trackingId = `HTX-${Math.floor(100000 + Math.random() * 900000)}`;
+  const currentTrackingId = trackingId || "HTX-4821";
   const inspectionHash = "SHA256:7e8a9b2c3d4e5f601a2b3c4d5e6f7a8b9c0d1e2f";
 
   return (
@@ -113,7 +120,7 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
                 <div className="w-16 h-16 bg-black text-white p-1 flex items-center justify-center rounded">
                   <QrCode className="w-14 h-14 text-white" />
                 </div>
-                <span className="text-[10px] font-mono font-bold mt-1">{trackingId}</span>
+                <span className="text-[10px] font-mono font-bold mt-1">{currentTrackingId}</span>
               </div>
             </div>
 
@@ -121,13 +128,13 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
             <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 text-xs">
               <div className="space-y-1">
                 <p className="text-[9px] font-bold uppercase text-zinc-500">CONSIGNOR (SENDER)</p>
-                <p className="font-bold text-sm">Hitch Sender Account</p>
+                <p className="font-bold text-sm">Hitch Verified Sender</p>
                 <p className="text-zinc-600">Origin: {form.fromCity || "Bengaluru"}</p>
-                <p className="text-zinc-600">Pickup Window: {form.pickupEarliest || "Scheduled"}</p>
+                <p className="text-zinc-600">Pickup Window: {form.pickupEarliest ? form.pickupEarliest.replace("T", " ") : "Scheduled"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[9px] font-bold uppercase text-zinc-500">CONSIGNEE (RECIPIENT)</p>
-                <p className="font-bold text-sm">{form.recipientName || "Recipient Name"}</p>
+                <p className="font-bold text-sm">{form.recipientName || "Aarav Sharma"}</p>
                 <p className="text-zinc-600">Phone: {form.recipientPhone || "+91 98765 43210"}</p>
                 <p className="text-zinc-600 truncate">Dest: {form.recipientAddress || "City Terminal Point"}</p>
               </div>
@@ -137,7 +144,7 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
             <div className="grid grid-cols-4 gap-2 border-b-2 border-black pb-4 text-center">
               <div className="border border-black p-2 rounded">
                 <p className="text-[8px] font-bold text-zinc-500 uppercase">CATEGORY</p>
-                <p className="text-xs font-bold capitalize">{form.category || "General"}</p>
+                <p className="text-xs font-bold capitalize">{form.category || "Electronics"}</p>
               </div>
               <div className="border border-black p-2 rounded">
                 <p className="text-[8px] font-bold text-zinc-500 uppercase">WEIGHT</p>
@@ -145,7 +152,7 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
               </div>
               <div className="border border-black p-2 rounded">
                 <p className="text-[8px] font-bold text-zinc-500 uppercase">DECLARED VAL</p>
-                <p className="text-xs font-bold">₹{form.declaredValue || "5,000"}</p>
+                <p className="text-xs font-bold">₹{form.declaredValue || "12,000"}</p>
               </div>
               <div className="border border-black p-2 rounded bg-amber-50">
                 <p className="text-[8px] font-bold text-amber-800 uppercase">TAMPER SEAL #</p>
@@ -161,7 +168,7 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
                   <span>AMAZON BEDROCK AI INSPECTION: PASSED ✓</span>
                 </div>
                 <p className="text-[10px] text-emerald-800 font-mono">
-                  Integrity Score: {inspectionData?.score || 96}/100 · Non-hazardous verified · Zero contraband
+                  Integrity Score: 96/100 · Non-hazardous verified · Zero contraband
                 </p>
                 <p className="text-[9px] text-emerald-700 font-mono">{inspectionHash}</p>
               </div>
@@ -204,27 +211,23 @@ function RegulatoryLabelModal({ isOpen, onClose, form, inspectionData }) {
 }
 
 // Bedrock AI Packaging Advisor Chatbot
-function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
+function BedrockPackagingAdvisor({ form, setForm }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: "bot",
-      text: "👋 Hi! I'm your Amazon Bedrock Packaging & Anti-Tamper Advisor (Claude 3.5 Sonnet). I'll guide you on how to pack your parcel so no one can tamper with it unnoticed, check your package photo, and generate an official regulatory compliance label.",
+      text: "👋 Hi! I'm your Amazon Bedrock Packaging & Anti-Tamper Advisor (Claude 3.5 Sonnet). I'll guide you on how to pack your parcel so no one can tamper with it unnoticed, and analyze your package photo for vulnerabilities.",
       time: "Just now",
       suggestions: [
         "🛡️ How do I tamper-proof an electronics parcel?",
         "💰 How does the ₹10 Banknote Seal work?",
-        "📸 Analyze my package photo for vulnerabilities",
-        "📄 Generate regulatory compliance label"
+        "📸 Analyze my package photo for vulnerabilities"
       ]
     }
   ]);
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [uploadedPhoto, setUploadedPhoto] = useState(null);
-  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
-  const [inspectionResult, setInspectionResult] = useState(null);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
@@ -254,19 +257,16 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
       const lower = query.toLowerCase();
       if (lower.includes("tamper-proof") || lower.includes("electronics") || lower.includes("pack")) {
         botResponse = "📦 **Bedrock Tamper-Proofing Checklist for Electronics:**\n\n1. **Inner Layer:** Wrap device in anti-static bubble wrap (2 layers minimum).\n2. **Double-Box Strategy:** Place in inner box, then outer corrugated carton with 1-inch void fill.\n3. **H-Tape Sealing:** Apply reinforced cross-filament tape over all box seams (forming an 'H' on top & bottom).\n4. **Sign the Seams:** Sign across the tape seam with a permanent marker. Any slit or re-taping will visibly break the signature.\n5. **Insert ₹10 Banknote Seal:** Place a ₹10 note inside and record its serial number!";
-        suggestions = ["How does the ₹10 Banknote Seal work?", "Upload photo for Bedrock visual inspection", "Generate regulatory label"];
+        suggestions = ["How does the ₹10 Banknote Seal work?", "Upload photo for Bedrock visual inspection"];
       } else if (lower.includes("banknote") || lower.includes("seal") || lower.includes("serial")) {
         botResponse = "🛡️ **The RBI ₹10 Banknote Seal Protocol:**\n\n- Every Indian banknote has a **unique alphanumeric serial number** (e.g. `5AC 123456`).\n- Slip a ₹10 note inside the package before taping.\n- Log the serial number into Hitch.\n- At drop-off, the recipient checks that the note inside matches the recorded serial code. Because serial numbers cannot be forged or duplicated, any substitution of the package contents is instantly exposed!";
-        suggestions = ["Analyze my package photo", "Check regulatory compliance rules", "Generate shipping label"];
+        suggestions = ["Analyze my package photo", "How to pack fragile items?"];
       } else if (lower.includes("photo") || lower.includes("analyze") || lower.includes("inspect")) {
         botResponse = "📸 Please upload a clear photo of your packed parcel using the attachment button below. I'll inspect the seams, tape integrity, opacity, and assign a Tamper Resistance Score (0–100)!";
         suggestions = ["Upload Photo Now", "How to pack fragile items?"];
-      } else if (lower.includes("label") || lower.includes("regulatory")) {
-        botResponse = "📄 I've prepared your **Official Hitch Regulatory Compliance Manifest & Label** including Section 79 IT Act clauses, AI inspection hash, and OTP checkpoints! Click below to view and print.";
-        suggestions = ["Open Printable Label", "Ask another packaging question"];
       } else {
-        botResponse = "💡 **Claude 3.5 Sonnet Recommendation:** Ensure all package joints are sealed with opaque tape, declared contents match your booking, and your recipient has their phone ready for the 4-digit Delivery OTP. Would you like me to inspect your photo or generate your compliance label?";
-        suggestions = ["Upload package photo", "Generate regulatory label", "How to pack liquids/medicines?"];
+        botResponse = "💡 **Claude 3.5 Sonnet Recommendation:** Ensure all package joints are sealed with opaque tape, declared contents match your booking, and your recipient has their phone ready for the 4-digit Delivery OTP.";
+        suggestions = ["Upload package photo", "How to pack liquids/medicines?"];
       }
 
       setMessages(prev => [
@@ -287,9 +287,6 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploadedPhoto(file.name);
-    setAnalyzingPhoto(true);
-
     const userMsg = {
       id: Date.now(),
       sender: "user",
@@ -300,37 +297,22 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
     setIsTyping(true);
 
     setTimeout(() => {
-      const inspection = {
-        score: 96,
-        safe: true,
-        category: form.category || "Electronics",
-        volumeTier: "Medium Carton",
-        observations: [
-          "✓ Reinforced cross-tape detected on all 6 seams",
-          "✓ Opaque non-translucent outer wrap prevents content visibility",
-          "✓ Zero hazardous, battery bulging, or contraband indicators",
-          "✓ Verified tamper seal serial slot ready"
-        ]
-      };
-      setInspectionResult(inspection);
-      setAnalyzingPhoto(false);
       setIsTyping(false);
-
       setMessages(prev => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: `🔍 **Bedrock Multimodal Visual Analysis Complete!**\n\n- **Tamper Resistance Score:** 96/100 (HIGH SECURITY)\n- **Safety Status:** VERIFIED SAFE ✓\n- **Packaging Assessment:** Excellent cross-seam adhesion. Minimal risk of undetected opening in transit.\n\nReady to print your compliance label!`,
+          text: `🔍 **Bedrock Multimodal Visual Analysis Complete!**\n\n- **Tamper Resistance Score:** 96/100 (HIGH SECURITY)\n- **Safety Status:** VERIFIED SAFE ✓\n- **Packaging Assessment:** Excellent cross-seam adhesion. Minimal risk of undetected opening in transit. Your compliance label will be unlocked upon checkout!`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestions: ["Open Printable Label", "How to safely hand off to carrier?"]
+          suggestions: ["How does the ₹10 Banknote Seal work?", "How to safely hand off to carrier?"]
         }
       ]);
-    }, 2000);
+    }, 1800);
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-zincBorder shadow-sm overflow-hidden flex flex-col h-[560px]">
+    <div className="bg-white rounded-2xl border border-zincBorder shadow-sm overflow-hidden flex flex-col h-[520px]">
       {/* Advisor Header */}
       <div className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 text-white px-5 py-3.5 flex items-center justify-between border-b border-zinc-700">
         <div className="flex items-center gap-2.5">
@@ -342,14 +324,9 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
               <h3 className="text-sm font-bold">Bedrock Packaging &amp; Tamper Advisor</h3>
               <span className="text-[9px] font-mono bg-violet-900/60 text-violet-200 border border-violet-700 px-1.5 py-0.5 rounded">Claude 3.5 Sonnet</span>
             </div>
-            <p className="text-[10px] text-zinc-400">Interactive anti-tamper packing guide &amp; regulatory label printer</p>
+            <p className="text-[10px] text-zinc-400">Interactive anti-tamper packing guide &amp; photo inspection</p>
           </div>
         </div>
-        <button onClick={onOpenLabel}
-          className="flex items-center gap-1 px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg border border-white/20 transition-all">
-          <Printer className="w-3.5 h-3.5 text-hitchOrange" />
-          <span className="hidden sm:inline">Print Label</span>
-        </button>
       </div>
 
       {/* Chat Messages */}
@@ -369,12 +346,11 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
               <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
                 {m.suggestions.map((s, idx) => (
                   <button key={idx} onClick={() => {
-                      if (s.includes("Printable Label") || s.includes("Generate regulatory")) onOpenLabel();
-                      else if (s.includes("Upload Photo")) fileInputRef.current?.click();
+                      if (s.includes("Photo")) fileInputRef.current?.click();
                       else handleSend(s);
                     }}
                     className="text-[10px] font-medium bg-white text-zinc-700 border border-zinc-200 hover:border-hitchOrange hover:text-hitchOrange px-2.5 py-1 rounded-full shadow-xs transition-all flex items-center gap-1">
-                    {s.includes("Label") ? <FileText className="w-3 h-3 text-hitchOrange" /> : s.includes("Photo") ? <ImageIcon className="w-3 h-3 text-blue-500" /> : <Sparkles className="w-3 h-3 text-amber-500" />}
+                    {s.includes("Photo") ? <ImageIcon className="w-3 h-3 text-blue-500" /> : <Sparkles className="w-3 h-3 text-amber-500" />}
                     {s}
                   </button>
                 ))}
@@ -414,7 +390,7 @@ function BedrockPackagingAdvisor({ form, setForm, onOpenLabel }) {
 }
 
 // Request snapshot sidebar
-function RequestSnapshot({ step, form, onOpenAdvisor, onOpenLabel }) {
+function RequestSnapshot({ step, form, onOpenAdvisor }) {
   const isComplete = form.category && form.weightKg > 0 && form.fromCity && form.toCity && form.recipientName;
   return (
     <div className="space-y-4">
@@ -447,15 +423,10 @@ function RequestSnapshot({ step, form, onOpenAdvisor, onOpenLabel }) {
           );
         })}
 
-        {/* Action Buttons inside Snapshot */}
-        <div className="pt-2 border-t border-zinc-100 space-y-2">
+        <div className="pt-2 border-t border-zinc-100">
           <button onClick={onOpenAdvisor}
-            className="w-full flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-zinc-900 to-zinc-800 text-white rounded-xl text-xs font-semibold hover:bg-zinc-700 shadow-sm transition-all">
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-zinc-900 to-zinc-800 text-white rounded-xl text-xs font-semibold hover:bg-zinc-700 shadow-sm transition-all">
             <Sparkles className="w-3.5 h-3.5 text-hitchOrange" /> Bedrock Packaging Advisor
-          </button>
-          <button onClick={onOpenLabel}
-            className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-xl text-xs font-semibold hover:bg-zinc-100 transition-all">
-            <Printer className="w-3.5 h-3.5 text-zinc-500" /> View Regulatory Label
           </button>
         </div>
       </div>
@@ -504,11 +475,12 @@ function StepCards({ step }) {
   );
 }
 
-export default function SenderPortal() {
+export default function SenderPortal({ shipments, activeShipmentId, onAddShipment, onSelectPortal }) {
   const [screen, setScreen] = useState("home"); // home | create | payment
   const [wizardStep, setWizardStep] = useState(1);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [showAdvisorInWizard, setShowAdvisorInWizard] = useState(false);
+  const [createdTrackingId, setCreatedTrackingId] = useState("HTX-4821");
 
   const [form, setForm] = useState({
     category: "Electronics", weightKg: 2, declaredValue: "12000",
@@ -527,7 +499,7 @@ export default function SenderPortal() {
   useEffect(() => {
     if (screen === "create" && wizardStep === 3) {
       setLaneLoaded(false);
-      const t = setTimeout(() => setLaneLoaded(true), 1500);
+      const t = setTimeout(() => setLaneLoaded(true), 1200);
       return () => clearTimeout(t);
     }
   }, [screen, wizardStep]);
@@ -538,15 +510,41 @@ export default function SenderPortal() {
     setWeightError(n > 30 ? "Weight cannot exceed 30 kg for passenger baggage" : "");
   };
 
+  const handleDummyPayment = () => {
+    const newId = `HTX-${Math.floor(1000 + Math.random() * 9000)}`;
+    setCreatedTrackingId(newId);
+    setPayDone(true);
+
+    if (onAddShipment) {
+      onAddShipment({
+        id: newId,
+        from: form.fromCity || "Bengaluru",
+        to: form.toCity || "Mumbai",
+        category: form.category || "Electronics",
+        weight: form.weightKg || 2.0,
+        declaredValue: form.declaredValue || "12000",
+        payout: Math.round((form.weightKg || 2) * 75) || 180,
+        status: "MATCHED",
+        pickupOtp: "4829",
+        deliveryOtp: "7104",
+        banknoteSerial: form.banknoteSerial || "5AC 123456",
+        sender: "You (Verified)",
+        recipient: form.recipientName || "Aarav Sharma",
+        recipientPhone: form.recipientPhone || "+91 98765 43210",
+        eta: "Today 6:30 PM",
+        carrier: "Rahul V."
+      });
+    }
+  };
+
   // ─── HOME ───────────────────────────────────────────────────────────────────
   if (screen === "home") return (
     <div className="space-y-0 animate-fadeIn">
-      {/* Regulatory Label Modal */}
-      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} />
+      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
 
       {/* Hero split layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-4 pb-12">
-        {/* Left: Hero copy */}
+        {/* Left: Hero copy with crisp Big-Tech 3-word subtitle */}
         <div className="flex flex-col justify-center space-y-6">
           <div className="inline-flex items-center gap-2 self-start">
             <span className="w-2 h-2 rounded-full bg-hitchOrange" />
@@ -558,8 +556,9 @@ export default function SenderPortal() {
             <h1 className="font-display text-5xl lg:text-6xl italic text-hitchOrange leading-tight">with people.</h1>
           </div>
 
-          <p className="text-zinc-500 text-base leading-relaxed max-w-md">
-            Hitch matches your parcel with verified travelers already going your way. Faster than couriers. Cheaper than air cargo. Every handoff secured by OTP.
+          {/* Crisp 3-4 word subtitle replacing verbose paragraph */}
+          <p className="text-zinc-500 text-lg font-medium tracking-tight">
+            Same-day intercity crowd-shipping.
           </p>
 
           <div className="flex items-center gap-3">
@@ -567,9 +566,9 @@ export default function SenderPortal() {
               className="flex items-center gap-2 px-6 py-3 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-md shadow-hitchOrange/20 transition-all text-sm">
               Send a package <ArrowRight className="w-4 h-4" />
             </button>
-            <button onClick={() => setIsLabelModalOpen(true)}
-              className="flex items-center gap-1.5 px-6 py-3 border border-zinc-200 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-50 transition-all text-sm">
-              <Printer className="w-4 h-4 text-zinc-500" /> Compliance Label
+            <button onClick={() => onSelectPortal && onSelectPortal("carrier")}
+              className="px-6 py-3 border border-zinc-200 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-50 transition-all text-sm">
+              Browse carriers
             </button>
           </div>
 
@@ -637,8 +636,46 @@ export default function SenderPortal() {
       {/* Live delivery feed ticker */}
       <LiveTicker />
 
+      {/* Real-time Shipments Carousel synced across portals */}
+      <div className="pt-10">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+              <span>Active Platform Shipments</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </h3>
+            <p className="text-xs text-zinc-500">Real-time status synced with carrier OTP handshakes</p>
+          </div>
+          <span className="text-xs font-semibold text-hitchOrange">{shipments?.length || 3} Active</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(shipments || []).map(s => (
+            <div key={s.id} className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 hover:shadow-md transition-all space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded">{s.id}</span>
+                <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full border " + (STATUS_STYLE[s.status] || "bg-zinc-100 text-zinc-600")}>
+                  {s.status.replace(/_/g, " ")}
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 text-sm font-bold text-zinc-900">
+                  <MapPin className="w-3.5 h-3.5 text-hitchOrange shrink-0" /> {s.from}
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-zinc-500 ml-5">
+                  <ArrowRight className="w-3 h-3" /> {s.to}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-100 pt-3">
+                <span>{s.weight} kg · {s.category}</span>
+                <span className="font-bold text-hitchOrange">₹{s.payout}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Bedrock AI Packaging Advisor Section */}
-      <div className="pt-10 pb-4">
+      <div className="pt-12 pb-4">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -646,15 +683,11 @@ export default function SenderPortal() {
               <span className="text-xs font-bold uppercase tracking-widest text-hitchOrange">AI Security Assistant</span>
             </div>
             <h2 className="text-2xl font-bold text-zinc-900 mt-1">Amazon Bedrock Packaging &amp; Tamper Advisor</h2>
-            <p className="text-xs text-zinc-500 mt-1">Get customized anti-tamper packing instructions and print certified courier labels.</p>
+            <p className="text-xs text-zinc-500 mt-1">Get customized anti-tamper packing instructions and upload photos for Claude 3.5 Sonnet analysis.</p>
           </div>
-          <button onClick={() => setIsLabelModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all shadow-sm">
-            <Printer className="w-4 h-4 text-hitchOrange" /> Print Manifest Label
-          </button>
         </div>
 
-        <BedrockPackagingAdvisor form={form} setForm={setForm} onOpenLabel={() => setIsLabelModalOpen(true)} />
+        <BedrockPackagingAdvisor form={form} setForm={setForm} />
       </div>
 
       {/* How it works */}
@@ -691,7 +724,7 @@ export default function SenderPortal() {
   // ─── CREATE WIZARD ───────────────────────────────────────────────────────────
   if (screen === "create") return (
     <div className="animate-fadeIn">
-      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} />
+      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
 
       {/* Page Header */}
       <div className="mb-8 flex items-center justify-between">
@@ -712,7 +745,7 @@ export default function SenderPortal() {
       {/* Collapsible Advisor in Wizard */}
       {showAdvisorInWizard && (
         <div className="mb-8 animate-fadeIn">
-          <BedrockPackagingAdvisor form={form} setForm={setForm} onOpenLabel={() => setIsLabelModalOpen(true)} />
+          <BedrockPackagingAdvisor form={form} setForm={setForm} />
         </div>
       )}
 
@@ -738,7 +771,6 @@ export default function SenderPortal() {
         {/* Main form */}
         <div className="lg:col-span-8">
           <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-7 space-y-6">
-            {/* Section label */}
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-0.5">Dispatch Request</p>
               <h2 className="text-xl font-bold text-zinc-900">
@@ -796,7 +828,7 @@ export default function SenderPortal() {
                     <p className="text-[10px] text-zinc-400 mt-1">Optional, but useful for support and payout review.</p>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Photo URL / S3 Upload Reference</label>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Photo URL / Reference</label>
                     <input type="url" value={form.photoUrl} onChange={e => setForm({...form, photoUrl: e.target.value})}
                       className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
                       placeholder="https://..." />
@@ -913,7 +945,7 @@ export default function SenderPortal() {
                       </div>
                       <input type="datetime-local" value={form.pickupLatest} onChange={e => setForm({...form, pickupLatest: e.target.value})}
                         className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-                      <p className="text-[10px] text-zinc-400 mt-1">Must be later than the earliest pickup time.</p>
+                        <p className="text-[10px] text-zinc-400 mt-1">Must be later than the earliest pickup time.</p>
                     </div>
                   </div>
                 </div>
@@ -1032,8 +1064,7 @@ export default function SenderPortal() {
         <div className="lg:col-span-4">
           <div className="sticky top-24">
             <RequestSnapshot step={wizardStep} form={form}
-              onOpenAdvisor={() => setShowAdvisorInWizard(true)}
-              onOpenLabel={() => setIsLabelModalOpen(true)} />
+              onOpenAdvisor={() => setShowAdvisorInWizard(true)} />
           </div>
         </div>
       </div>
@@ -1043,7 +1074,7 @@ export default function SenderPortal() {
   // ─── PAYMENT / SUCCESS ────────────────────────────────────────────────────
   if (screen === "payment") return (
     <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
-      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} />
+      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
 
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-all">
@@ -1070,26 +1101,26 @@ export default function SenderPortal() {
                 <span>Escrow total</span><span className="text-hitchOrange">₹{Math.round((form.weightKg || 2) * 85 + 17)}</span>
               </div>
             </div>
-            <button onClick={() => setPayDone(true)}
+            <button onClick={handleDummyPayment}
               className="w-full py-3.5 bg-hitchOrange text-white font-bold rounded-xl hover:bg-hitchOrange-hover shadow-lg shadow-hitchOrange/20 transition-all text-sm">
-              Pay &amp; Lock Escrow via Razorpay
+              Pay &amp; Lock Escrow via Razorpay (1-Click Test)
             </button>
-            <p className="text-center text-xs text-zinc-400">256-bit SSL · UPI · Cards · Net Banking</p>
+            <p className="text-center text-xs text-zinc-400">Instant test checkout · Escrow auto-locks &amp; notifies carrier</p>
           </div>
         </div>
       ) : (
         <div className="space-y-5 animate-fadeIn">
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h2 className="text-xl font-bold text-emerald-900">Request Published!</h2>
-            <p className="text-sm text-emerald-700">Matching carriers on your corridor have been notified.</p>
+            <h2 className="text-xl font-bold text-emerald-900">Payment Confirmed &amp; Escrow Locked!</h2>
+            <p className="text-sm text-emerald-700">Shipment <strong>{createdTrackingId}</strong> is now live on the Carrier matching feed.</p>
           </div>
 
           <div className="bg-white rounded-2xl border-2 border-dashed border-zinc-200 p-7 space-y-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Hitch Shipment</p>
-                <p className="font-display text-3xl text-zinc-900 mt-0.5">HTX-{Math.floor(Math.random()*9000+1000)}</p>
+                <p className="font-display text-3xl text-zinc-900 mt-0.5">{createdTrackingId}</p>
               </div>
               <div className="w-16 h-16 bg-zinc-900 rounded-xl flex items-center justify-center">
                 <QrCode className="w-10 h-10 text-white" />
@@ -1098,7 +1129,7 @@ export default function SenderPortal() {
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               {[
-                ["From", form.fromCity || "Mumbai"], ["To", form.toCity || "Pune"],
+                ["From", form.fromCity || "Bengaluru"], ["To", form.toCity || "Mumbai"],
                 ["Category", form.category], ["Weight", `${form.weightKg || 2} kg`],
                 ["Recipient", form.recipientName || "Aarav Sharma"], ["Fragile", form.fragile ? "Yes" : "No"],
               ].map(([l, v]) => (
@@ -1112,16 +1143,18 @@ export default function SenderPortal() {
             <div className="bg-hitchOrange/10 border border-hitchOrange/30 rounded-xl p-5 text-center">
               <p className="text-[10px] font-bold uppercase text-hitchOrange tracking-widest mb-2">4-Digit Pickup OTP</p>
               <p className="text-5xl font-bold text-zinc-900 tracking-widest font-mono">{pickupOtp}</p>
-              <p className="text-[10px] text-zinc-500 mt-2">Share only with your matched carrier at the pickup point.</p>
+              <p className="text-[10px] text-zinc-500 mt-2">Give this code to the traveler at origin pickup.</p>
             </div>
 
+            {/* Regulatory Compliance Label Button appears here after payment */}
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setIsLabelModalOpen(true)}
                 className="flex items-center justify-center gap-2 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 shadow-sm transition-all">
-                <Printer className="w-4 h-4 text-hitchOrange" /> Print Regulatory Label
+                <Printer className="w-4 h-4 text-hitchOrange" /> Print Compliance Label
               </button>
-              <button className="flex items-center justify-center gap-2 py-2.5 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-all">
-                <Download className="w-4 h-4" /> Download PDF
+              <button onClick={() => onSelectPortal && onSelectPortal("carrier")}
+                className="flex items-center justify-center gap-2 py-2.5 bg-hitchBlue text-white rounded-xl text-xs font-semibold hover:bg-hitchBlue-hover transition-all">
+                <Truck className="w-4 h-4" /> Open Carrier Portal →
               </button>
             </div>
           </div>
