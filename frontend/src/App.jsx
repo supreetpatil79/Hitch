@@ -23,6 +23,8 @@ import {
   Bus
 } from 'lucide-react';
 
+const LIVE_API_BASE_URL = "https://zq2mtwye39.execute-api.ap-south-1.amazonaws.com";
+
 export default function App() {
   const [activePortal, setActivePortal] = useState('sender'); // 'sender' | 'carrier' | 'tracker'
 
