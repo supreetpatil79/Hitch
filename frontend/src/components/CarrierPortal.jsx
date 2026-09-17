@@ -445,42 +445,51 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
                 <div className="space-y-6 animate-fadeIn">
                   <div>
                     <h3 className="text-base font-bold text-zinc-900 mb-1">Route selection</h3>
-                    <p className="text-xs text-zinc-500 mb-3">Pick both cities from search suggestions so ranking, matching, and map previews stay accurate.</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <p className="text-xs text-zinc-500 mb-3.5">Pick both cities from search suggestions so ranking, matching, and map previews stay accurate.</p>
+                    <div className="grid grid-cols-2 gap-5">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Origin city</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">CITY</span>
+                        <label className="block text-sm font-semibold text-zinc-900 mb-2">Origin city</label>
+                        <div className="flex items-center bg-white border border-zinc-200 rounded-full px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-2xs transition-all">
+                          <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider shrink-0">
+                            CITY
+                          </span>
                           <input type="text" list="carrier-from-cities" value={trip.fromCity}
                             onChange={e => setTrip({...trip, fromCity: e.target.value})}
-                            className="w-full pl-16 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40 font-medium"
-                            placeholder="Search departure city" />
+                            className="w-full pl-3 pr-2 py-1 text-sm bg-transparent font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                            placeholder="Bengaluru" />
                           <datalist id="carrier-from-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
                         </div>
+                        <p className="text-xs text-zinc-400 mt-1.5">Search and select your departure city.</p>
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Destination city</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">CITY</span>
+                        <label className="block text-sm font-semibold text-zinc-900 mb-2">Destination city</label>
+                        <div className="flex items-center bg-white border border-zinc-200 rounded-full px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-2xs transition-all">
+                          <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider shrink-0">
+                            CITY
+                          </span>
                           <input type="text" list="carrier-to-cities" value={trip.toCity}
                             onChange={e => setTrip({...trip, toCity: e.target.value})}
-                            className="w-full pl-16 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchBlue/40 font-medium"
-                            placeholder="Select destination city" />
+                            className="w-full pl-3 pr-2 py-1 text-sm bg-transparent font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                            placeholder="Mysuru" />
                           <datalist id="carrier-to-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
                         </div>
+                        <p className="text-xs text-zinc-400 mt-1.5">Select the city where you can complete the delivery.</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
                     <h3 className="text-base font-bold text-zinc-900 mb-1">Transport mode</h3>
-                    <div className="grid grid-cols-5 gap-2">
+                    <p className="text-xs text-zinc-500 mb-3">This helps senders understand trust, timing, and handling conditions before they request a match.</p>
+                    <div className="grid grid-cols-5 gap-3">
                       {TRANSPORT_MODES.map(({ id, label, icon: Icon }) => (
                         <button key={id} type="button" onClick={() => setTrip({...trip, mode: id})}
-                          className={"py-3.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1.5 " +
-                            (trip.mode === id ? "bg-hitchBlue/5 border-hitchBlue text-hitchBlue shadow-xs" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50")}>
-                          <Icon className="w-5 h-5" />
+                          className={"py-4 px-3 rounded-2xl text-xs font-semibold border transition-all flex flex-col items-center justify-center gap-2 " +
+                            (trip.mode === id
+                              ? "bg-blue-50/70 border-blue-500 text-blue-600 ring-2 ring-blue-500/20 shadow-xs"
+                              : "bg-white text-zinc-800 border-zinc-200 hover:bg-zinc-50")}>
+                          <Icon className="w-6 h-6" />
                           <span>{label}</span>
                         </button>
                       ))}
@@ -488,8 +497,9 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-zinc-900 mb-1">Route preview</h3>
-                    <RoutePreviewIllustration mode={trip.mode} origin={trip.fromCity} destination={trip.toCity} />
+                    <h3 className="text-base font-bold text-zinc-900 mb-0.5">Route preview</h3>
+                    <p className="text-xs text-zinc-500 mb-3">Distance and duration help you price more accurately for the selected lane.</p>
+                    <RoutePreviewIllustration mode={trip.mode} origin={trip.fromCity} destination={trip.toCity} transportName={trip.transportName} />
                   </div>
                 </div>
               )}

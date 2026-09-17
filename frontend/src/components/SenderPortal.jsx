@@ -1007,38 +1007,73 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
             {/* STEP 2 */}
             {wizardStep === 2 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Pickup City</label>
-                    <input type="text" list="from-cities" value={form.fromCity} onChange={e => setForm({...form, fromCity: e.target.value})}
-                      className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-                    <datalist id="from-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                    <label className="block text-sm font-semibold text-zinc-900 mb-2">Pickup city</label>
+                    <div className="flex items-center bg-white border border-zinc-200 rounded-full px-3 py-1.5 focus-within:border-hitchOrange focus-within:ring-2 focus-within:ring-hitchOrange/20 shadow-2xs transition-all">
+                      <span className="text-[10px] font-mono font-bold text-orange-700 bg-orange-100/90 px-2.5 py-1 rounded-full border border-orange-200/80 uppercase tracking-wider shrink-0">
+                        CITY
+                      </span>
+                      <input type="text" list="from-cities" value={form.fromCity} onChange={e => setForm({...form, fromCity: e.target.value})}
+                        className="w-full pl-3 pr-2 py-1 text-sm bg-transparent font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                        placeholder="Bengaluru" />
+                      <datalist id="from-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1.5">Search and select the exact city or route point.</p>
                   </div>
+
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Destination City</label>
-                    <input type="text" list="to-cities" value={form.toCity} onChange={e => setForm({...form, toCity: e.target.value})}
-                      className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-                    <datalist id="to-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                    <label className="block text-sm font-semibold text-zinc-900 mb-2">Destination city</label>
+                    <div className="flex items-center bg-white border border-orange-400 ring-2 ring-orange-500/20 rounded-full px-3 py-1.5 shadow-2xs transition-all">
+                      <span className="text-[10px] font-mono font-bold text-orange-700 bg-orange-100/90 px-2.5 py-1 rounded-full border border-orange-200/80 uppercase tracking-wider shrink-0">
+                        CITY
+                      </span>
+                      <input type="text" list="to-cities" value={form.toCity} onChange={e => setForm({...form, toCity: e.target.value})}
+                        className="w-full pl-3 pr-2 py-1 text-sm bg-transparent font-medium text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                        placeholder="Mumbai" />
+                      <datalist id="to-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1.5">Select the delivery city from verified route suggestions.</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Name</label>
-                    <input type="text" value={form.recipientName} onChange={e => setForm({...form, recipientName: e.target.value})}
-                      className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Phone</label>
-                    <input type="tel" value={form.recipientPhone} onChange={e => setForm({...form, recipientPhone: e.target.value})}
-                      className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-                  </div>
-                </div>
-
+                {/* Route Preview in Step 2 */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Address</label>
-                  <textarea rows={2} value={form.recipientAddress} onChange={e => setForm({...form, recipientAddress: e.target.value})}
-                    className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40 resize-none" />
+                  <h3 className="text-base font-bold text-zinc-900 mb-0.5">Route preview</h3>
+                  <p className="text-xs text-zinc-500 mb-3">Double-check the pickup and destination cities before you continue.</p>
+                  <RoutePreviewIllustration
+                    mode={selectedCarrier?.mode || "train"}
+                    origin={form.fromCity}
+                    destination={form.toCity}
+                    transportName={selectedCarrier?.transportName}
+                  />
+                </div>
+
+                {/* Recipient Details */}
+                <div className="pt-2 border-t border-zinc-100 space-y-4">
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 mb-0.5">Recipient details</h3>
+                    <p className="text-xs text-zinc-500">These details support delivery coordination, OTP handoff, and support follow-up.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Name</label>
+                      <input type="text" value={form.recipientName} onChange={e => setForm({...form, recipientName: e.target.value})}
+                        className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Phone</label>
+                      <input type="tel" value={form.recipientPhone} onChange={e => setForm({...form, recipientPhone: e.target.value})}
+                        className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Address</label>
+                    <textarea rows={2} value={form.recipientAddress} onChange={e => setForm({...form, recipientAddress: e.target.value})}
+                      className="w-full px-3.5 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40 resize-none" />
+                  </div>
                 </div>
               </div>
             )}
