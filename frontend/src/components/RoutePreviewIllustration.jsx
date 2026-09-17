@@ -40,7 +40,7 @@ export default function RoutePreviewIllustration({
   const rightLandmarkLabel = isMysuru ? "Mysuru Hub" : isMumbai ? "Gateway of India" : `${dst} Hub`;
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 1. TRAIN MODE (Electrified Railway Track with Vande Bharat Train & Signals)
+  // 1. TRAIN MODE (Electrified Railway Track with Moving Vande Bharat Train)
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === "train") {
     return (
@@ -81,7 +81,6 @@ export default function RoutePreviewIllustration({
               <rect x="36" y="20" width="5" height="18" rx="1" fill="#94A3B8" />
               <rect x="45" y="20" width="5" height="18" rx="1" fill="#94A3B8" />
               <rect x="8" y="38" width="48" height="6" rx="1" fill="#475569" />
-              {/* Dome */}
               <path d="M 28 8 A 4 4 0 0 1 36 8 Z" fill="#CBD5E1" />
             </svg>
             <span className="text-[9px] font-bold text-zinc-600 mt-1 bg-white/95 px-2.5 py-0.5 rounded-full border border-zinc-200 shadow-2xs">
@@ -122,21 +121,25 @@ export default function RoutePreviewIllustration({
             </span>
           </div>
 
-          {/* Railway Tracks & Moving Vande Bharat Train SVG */}
+          {/* Railway Tracks & Animated Moving Train */}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg className="w-full h-full" viewBox="0 0 760 240" fill="none">
+              <defs>
+                <path id="train-track-motion" d="M 110 196 Q 380 41 650 196" fill="none" />
+              </defs>
+
               {/* Main Curve Arch Rails */}
               <path d="M 110 200 Q 380 45 650 200" stroke="#94A3B8" strokeWidth="14" strokeLinecap="round" />
               <path d="M 110 200 Q 380 45 650 200" stroke="#F8FAFC" strokeWidth="8" strokeLinecap="round" />
 
-              {/* Railway Ties / Sleepers (Spaced along the arch) */}
+              {/* Railway Ties / Sleepers */}
               <path d="M 110 200 Q 380 45 650 200" stroke="#334155" strokeWidth="16" strokeDasharray="4 16" />
 
               {/* Steel Inner Rails */}
               <path d="M 110 197 Q 380 42 650 197" stroke="#475569" strokeWidth="2.5" />
               <path d="M 110 203 Q 380 48 650 203" stroke="#475569" strokeWidth="2.5" />
 
-              {/* Signal Left (near origin) */}
+              {/* Signal Left */}
               <g transform="translate(255, 95)">
                 <line x1="10" y1="20" x2="10" y2="45" stroke="#334155" strokeWidth="3" />
                 <rect x="4" y="0" width="12" height="22" rx="6" fill="#0F172A" />
@@ -146,7 +149,7 @@ export default function RoutePreviewIllustration({
                 <text x="10" y="29.5" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#334155">S-14</text>
               </g>
 
-              {/* Signal Right (near dest) */}
+              {/* Signal Right */}
               <g transform="translate(525, 95)">
                 <line x1="10" y1="20" x2="10" y2="45" stroke="#334155" strokeWidth="3" />
                 <rect x="4" y="0" width="12" height="22" rx="6" fill="#0F172A" />
@@ -154,36 +157,41 @@ export default function RoutePreviewIllustration({
                 <circle cx="10" cy="15" r="3" fill="#334155" />
               </g>
 
-              {/* Vande Bharat Train Group with Gliding / Pulsing animation */}
-              <g className="animate-pulse" transform="translate(320, 68) rotate(3)">
-                {/* Yellow Headlight Beam Cone */}
-                <polygon points="120,4 165,-10 165,22 120,10" fill="#FEF08A" opacity="0.6" />
+              {/* Vande Bharat Train smoothly gliding on the rails */}
+              <g>
+                <animateMotion dur="8s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#train-track-motion" />
+                </animateMotion>
 
-                {/* Coach 1 (Rear) */}
-                <rect x="0" y="0" width="34" height="13" rx="2.5" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
-                <rect x="2" y="3" width="30" height="4" rx="1" fill="#0369A1" />
-                <circle cx="8" cy="13" r="2.5" fill="#334155" />
-                <circle cx="26" cy="13" r="2.5" fill="#334155" />
+                <g transform="translate(-60, -14)">
+                  {/* Headlight Beam */}
+                  <polygon points="120,4 165,-10 165,22 120,10" fill="#FEF08A" opacity="0.65" />
 
-                {/* Coupler */}
-                <line x1="34" y1="7" x2="38" y2="7" stroke="#334155" strokeWidth="2.5" />
+                  {/* Coach 1 */}
+                  <rect x="0" y="0" width="34" height="13" rx="2.5" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
+                  <rect x="2" y="3" width="30" height="4" rx="1" fill="#0369A1" />
+                  <circle cx="8" cy="13" r="2.5" fill="#334155" />
+                  <circle cx="26" cy="13" r="2.5" fill="#334155" />
 
-                {/* Coach 2 (Middle) */}
-                <rect x="38" y="0" width="36" height="13" rx="2.5" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
-                <rect x="40" y="3" width="32" height="4" rx="1" fill="#0369A1" />
-                <circle cx="46" cy="13" r="2.5" fill="#334155" />
-                <circle cx="66" cy="13" r="2.5" fill="#334155" />
+                  {/* Coupler */}
+                  <line x1="34" y1="7" x2="38" y2="7" stroke="#334155" strokeWidth="2.5" />
 
-                {/* Coupler */}
-                <line x1="74" y1="7" x2="78" y2="7" stroke="#334155" strokeWidth="2.5" />
+                  {/* Coach 2 */}
+                  <rect x="38" y="0" width="36" height="13" rx="2.5" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
+                  <rect x="40" y="3" width="32" height="4" rx="1" fill="#0369A1" />
+                  <circle cx="46" cy="13" r="2.5" fill="#334155" />
+                  <circle cx="66" cy="13" r="2.5" fill="#334155" />
 
-                {/* Coach 3 / Engine (Front Aerodynamic Nose) */}
-                <path d="M 78 0 L 110 0 Q 124 5 124 13 L 78 13 Z" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
-                <path d="M 80 3 L 108 3 Q 118 6 118 7 L 80 7 Z" fill="#0369A1" />
-                {/* Front Windshield */}
-                <path d="M 108 1 L 118 4 L 118 7 L 108 7 Z" fill="#0284C7" />
-                <circle cx="86" cy="13" r="2.5" fill="#334155" />
-                <circle cx="106" cy="13" r="2.5" fill="#334155" />
+                  {/* Coupler */}
+                  <line x1="74" y1="7" x2="78" y2="7" stroke="#334155" strokeWidth="2.5" />
+
+                  {/* Front Engine Nose */}
+                  <path d="M 78 0 L 110 0 Q 124 5 124 13 L 78 13 Z" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1.5" />
+                  <path d="M 80 3 L 108 3 Q 118 6 118 7 L 80 7 Z" fill="#0369A1" />
+                  <path d="M 108 1 L 118 4 L 118 7 L 108 7 Z" fill="#0284C7" />
+                  <circle cx="86" cy="13" r="2.5" fill="#334155" />
+                  <circle cx="106" cy="13" r="2.5" fill="#334155" />
+                </g>
               </g>
             </svg>
           </div>
@@ -236,7 +244,7 @@ export default function RoutePreviewIllustration({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 2. BUS MODE (Highway Trunk with Scania/Volvo Bus, Trees & 24x7 Dhaba)
+  // 2. BUS MODE (Highway Trunk with Moving Scania/Volvo Bus & Trees)
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === "bus") {
     return (
@@ -309,6 +317,10 @@ export default function RoutePreviewIllustration({
           {/* Highway Asphalt & Moving Bus SVG */}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg className="w-full h-full" viewBox="0 0 760 240" fill="none">
+              <defs>
+                <path id="bus-highway-motion" d="M 110 194 Q 380 39 650 194" fill="none" />
+              </defs>
+
               {/* Green Pine Trees along the route */}
               <g transform="translate(190, 85)">
                 <polygon points="10,0 2,16 18,16" fill="#10B981" />
@@ -327,18 +339,24 @@ export default function RoutePreviewIllustration({
               {/* Yellow Dashed Center Divider */}
               <path d="M 110 200 Q 380 45 650 200" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="10 10" />
 
-              {/* Intercity Bus with headlights */}
-              <g className="animate-pulse" transform="translate(435, 96) rotate(14)">
-                {/* Yellow Headlight Beam */}
-                <polygon points="45,3 85,-6 85,18 45,9" fill="#FEF08A" opacity="0.6" />
+              {/* Intercity Bus smoothly moving on the road */}
+              <g>
+                <animateMotion dur="9s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#bus-highway-motion" />
+                </animateMotion>
 
-                <rect x="0" y="0" width="46" height="15" rx="3" fill="#F59E0B" stroke="#B45309" strokeWidth="1" />
-                {/* Windows */}
-                <rect x="3" y="2" width="38" height="6" rx="1" fill="#FEF3C7" />
-                <rect x="30" y="2" width="12" height="6" rx="1" fill="#FDE68A" />
-                {/* Wheels */}
-                <circle cx="9" cy="15" r="3" fill="#0F172A" />
-                <circle cx="36" cy="15" r="3" fill="#0F172A" />
+                <g transform="translate(-23, -15)">
+                  {/* Headlight Beam */}
+                  <polygon points="45,3 85,-6 85,18 45,9" fill="#FEF08A" opacity="0.6" />
+
+                  <rect x="0" y="0" width="46" height="15" rx="3" fill="#F59E0B" stroke="#B45309" strokeWidth="1" />
+                  {/* Windows */}
+                  <rect x="3" y="2" width="38" height="6" rx="1" fill="#FEF3C7" />
+                  <rect x="30" y="2" width="12" height="6" rx="1" fill="#FDE68A" />
+                  {/* Wheels */}
+                  <circle cx="9" cy="15" r="3" fill="#0F172A" />
+                  <circle cx="36" cy="15" r="3" fill="#0F172A" />
+                </g>
               </g>
             </svg>
           </div>
@@ -388,7 +406,7 @@ export default function RoutePreviewIllustration({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 3. CAR MODE (Scenic Expressway with FASTag Toll & NH-44 Badges)
+  // 3. CAR MODE (Scenic Expressway with Moving Blue Car)
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === "car") {
     return (
@@ -414,7 +432,7 @@ export default function RoutePreviewIllustration({
           </div>
         </div>
 
-        {/* SVG Canvas with Trees & Car */}
+        {/* SVG Canvas with Trees & Moving Car */}
         <div className="relative h-60 w-full bg-[#FCFCFD] rounded-2xl border border-zinc-100/90 overflow-hidden select-none">
           <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
@@ -458,9 +476,13 @@ export default function RoutePreviewIllustration({
             </span>
           </div>
 
-          {/* Expressway & Blue Car SVG */}
+          {/* Expressway & Moving Blue Car SVG */}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg className="w-full h-full" viewBox="0 0 760 240" fill="none">
+              <defs>
+                <path id="car-expressway-motion" d="M 110 194 Q 380 39 650 194" fill="none" />
+              </defs>
+
               {/* Trees along expressway */}
               <g transform="translate(190, 75)">
                 <polygon points="10,0 2,16 18,16" fill="#10B981" />
@@ -485,16 +507,21 @@ export default function RoutePreviewIllustration({
               <path d="M 110 212 Q 380 57 650 212" stroke="#F8FAFC" strokeWidth="1.5" />
               <path d="M 110 200 Q 380 45 650 200" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="10 10" />
 
-              {/* Blue Sedan with Headlights */}
-              <g className="animate-pulse" transform="translate(330, 78) rotate(3)">
-                {/* Headlight beam */}
-                <polygon points="44,3 85,-6 85,18 44,9" fill="#FEF08A" opacity="0.6" />
+              {/* Blue Sedan Moving smoothly on the road */}
+              <g>
+                <animateMotion dur="7s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#car-expressway-motion" />
+                </animateMotion>
 
-                <path d="M 4 10 L 10 3 L 30 3 L 42 7 L 44 12 L 0 12 Z" fill="#2563EB" />
-                <rect x="12" y="4" width="16" height="4" rx="1" fill="#93C5FD" />
-                {/* Wheels */}
-                <circle cx="10" cy="13" r="3" fill="#0F172A" />
-                <circle cx="34" cy="13" r="3" fill="#0F172A" />
+                <g transform="translate(-22, -13)">
+                  {/* Headlight beam */}
+                  <polygon points="44,3 85,-6 85,18 44,9" fill="#FEF08A" opacity="0.6" />
+
+                  <path d="M 4 10 L 10 3 L 30 3 L 42 7 L 44 12 L 0 12 Z" fill="#2563EB" />
+                  <rect x="12" y="4" width="16" height="4" rx="1" fill="#93C5FD" />
+                  <circle cx="10" cy="13" r="3" fill="#0F172A" />
+                  <circle cx="34" cy="13" r="3" fill="#0F172A" />
+                </g>
               </g>
             </svg>
           </div>
@@ -547,7 +574,7 @@ export default function RoutePreviewIllustration({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 4. FLIGHT MODE (Skyway Airway with Runways 09L/27R, ATC Tower & Radar PSR)
+  // 4. FLIGHT MODE (Skyway Airway with Moving Aircraft & Runways)
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === "flight") {
     return (
@@ -617,10 +644,14 @@ export default function RoutePreviewIllustration({
             </span>
           </div>
 
-          {/* Skyway Trajectory & Airplane SVG */}
+          {/* Skyway Trajectory & Moving Airplane SVG */}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg className="w-full h-full" viewBox="0 0 760 240" fill="none">
-              {/* ATC Tower (Left side) */}
+              <defs>
+                <path id="flight-airway-motion" d="M 140 160 Q 380 35 620 160" fill="none" />
+              </defs>
+
+              {/* ATC Tower */}
               <g transform="translate(205, 55)">
                 <line x1="12" y1="20" x2="12" y2="40" stroke="#0F172A" strokeWidth="2.5" />
                 <path d="M 4 10 L 20 10 L 16 20 L 8 20 Z" fill="#38BDF8" stroke="#0284C7" strokeWidth="1" />
@@ -628,7 +659,7 @@ export default function RoutePreviewIllustration({
                 <text x="12" y="46.5" textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#38BDF8">ATC TWR</text>
               </g>
 
-              {/* Radar PSR Tower (Right side) */}
+              {/* Radar PSR Tower */}
               <g transform="translate(525, 55)">
                 <path d="M 6 36 L 14 14 L 22 36" stroke="#475569" strokeWidth="2" fill="none" />
                 <line x1="10" y1="24" x2="18" y2="24" stroke="#475569" strokeWidth="1.5" />
@@ -645,11 +676,9 @@ export default function RoutePreviewIllustration({
                 <rect x="0" y="0" width="120" height="18" rx="3" fill="#1E293B" />
                 <line x1="10" y1="9" x2="110" y2="9" stroke="#F8FAFC" strokeWidth="2" strokeDasharray="10 8" />
                 <text x="12" y="12" fontSize="7" fontWeight="bold" fill="#E2E8F0">09L</text>
-                {/* Green Threshold lights */}
                 <circle cx="45" cy="9" r="2" fill="#22C55E" />
                 <circle cx="55" cy="9" r="2" fill="#22C55E" />
                 <circle cx="65" cy="9" r="2" fill="#22C55E" />
-                {/* Badges */}
                 <rect x="40" y="20" width="36" height="7" rx="2" fill="#0F172A" />
                 <text x="58" y="25" textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#38BDF8">RWY 09L</text>
                 <rect x="80" y="20" width="34" height="7" rx="2" fill="#0F172A" />
@@ -661,30 +690,29 @@ export default function RoutePreviewIllustration({
                 <rect x="0" y="0" width="120" height="18" rx="3" fill="#1E293B" />
                 <line x1="10" y1="9" x2="110" y2="9" stroke="#F8FAFC" strokeWidth="2" strokeDasharray="10 8" />
                 <text x="100" y="12" fontSize="7" fontWeight="bold" fill="#E2E8F0">27R</text>
-                {/* Green Threshold lights */}
                 <circle cx="40" cy="9" r="2" fill="#22C55E" />
                 <circle cx="50" cy="9" r="2" fill="#22C55E" />
                 <circle cx="60" cy="9" r="2" fill="#22C55E" />
-                {/* Badges */}
                 <rect x="0" y="20" width="36" height="7" rx="2" fill="#0F172A" />
                 <text x="18" y="25" textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#38BDF8">RWY 27R</text>
                 <rect x="40" y="20" width="80" height="7" rx="2" fill="#0F172A" />
                 <text x="80" y="25" textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#E2E8F0">ALS STROBES ACTIVE · CAT-III</text>
               </g>
 
-              {/* Modern Jet Airplane with contrail */}
-              <g className="animate-pulse" transform="translate(340, 85) rotate(4)">
-                {/* Contrail / Airflow */}
-                <line x1="-20" y1="8" x2="0" y2="8" stroke="#BAE6FD" strokeWidth="2" strokeDasharray="4 4" />
-                {/* Fuselage */}
-                <path d="M 0 8 Q 20 4 35 8 Q 20 12 0 8 Z" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1" />
-                {/* Swept Wings */}
-                <path d="M 12 8 L 8 20 L 14 20 L 22 8 Z" fill="#0284C7" />
-                <path d="M 12 8 L 8 -4 L 14 -4 L 22 8 Z" fill="#0284C7" />
-                {/* Tail Wing */}
-                <path d="M 2 8 L -2 1 L 3 1 L 7 8 Z" fill="#0369A1" />
-                {/* Cockpit */}
-                <circle cx="30" cy="8" r="1.5" fill="#38BDF8" />
+              {/* Airplane smoothly flying along the skyway */}
+              <g>
+                <animateMotion dur="5.5s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#flight-airway-motion" />
+                </animateMotion>
+
+                <g transform="translate(-17, -8)">
+                  <line x1="-20" y1="8" x2="0" y2="8" stroke="#BAE6FD" strokeWidth="2" strokeDasharray="4 4" />
+                  <path d="M 0 8 Q 20 4 35 8 Q 20 12 0 8 Z" fill="#F8FAFC" stroke="#0284C7" strokeWidth="1" />
+                  <path d="M 12 8 L 8 20 L 14 20 L 22 8 Z" fill="#0284C7" />
+                  <path d="M 12 8 L 8 -4 L 14 -4 L 22 8 Z" fill="#0284C7" />
+                  <path d="M 2 8 L -2 1 L 3 1 L 7 8 Z" fill="#0369A1" />
+                  <circle cx="30" cy="8" r="1.5" fill="#38BDF8" />
+                </g>
               </g>
             </svg>
           </div>
@@ -737,7 +765,7 @@ export default function RoutePreviewIllustration({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 5. BIKE MODE (Last-Mile Express Bikeway)
+  // 5. BIKE MODE (Last-Mile Express Bikeway with Moving Bike)
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-3xl border border-zinc-200/90 p-5 space-y-3 shadow-xs relative overflow-hidden animate-fadeIn">
@@ -776,21 +804,31 @@ export default function RoutePreviewIllustration({
           </div>
         </div>
 
-        {/* Bikeway Curve & Bike SVG */}
+        {/* Bikeway Curve & Moving Bike SVG */}
         <div className="absolute inset-0 flex items-center justify-center">
           <svg className="w-full h-full" viewBox="0 0 760 240" fill="none">
+            <defs>
+              <path id="bike-bikeway-motion" d="M 110 195 Q 380 40 650 195" fill="none" />
+            </defs>
+
             <path d="M 110 200 Q 380 45 650 200" stroke="#059669" strokeWidth="18" strokeLinecap="round" opacity="0.8" />
             <path d="M 110 200 Q 380 45 650 200" stroke="#FFFFFF" strokeWidth="2" strokeDasharray="8 8" />
 
-            {/* Bike with Headlight */}
-            <g className="animate-pulse" transform="translate(360, 85) rotate(3)">
-              <polygon points="26,3 55,-6 55,14 26,7" fill="#FEF08A" opacity="0.6" />
-              <circle cx="5" cy="10" r="4" stroke="#0F172A" strokeWidth="2" fill="none" />
-              <circle cx="25" cy="10" r="4" stroke="#0F172A" strokeWidth="2" fill="none" />
-              <line x1="5" y1="10" x2="14" y2="5" stroke="#7C3AED" strokeWidth="2.5" />
-              <line x1="14" y1="5" x2="25" y2="10" stroke="#7C3AED" strokeWidth="2.5" />
-              <line x1="14" y1="5" x2="16" y2="1" stroke="#334155" strokeWidth="2" />
-              <rect x="2" y="3" width="7" height="6" rx="1" fill="#F59E0B" />
+            {/* Bike moving smoothly on bikeway */}
+            <g>
+              <animateMotion dur="7.5s" repeatCount="indefinite" rotate="auto">
+                <mpath href="#bike-bikeway-motion" />
+              </animateMotion>
+
+              <g transform="translate(-15, -12)">
+                <polygon points="26,3 55,-6 55,14 26,7" fill="#FEF08A" opacity="0.6" />
+                <circle cx="5" cy="10" r="4" stroke="#0F172A" strokeWidth="2" fill="none" />
+                <circle cx="25" cy="10" r="4" stroke="#0F172A" strokeWidth="2" fill="none" />
+                <line x1="5" y1="10" x2="14" y2="5" stroke="#7C3AED" strokeWidth="2.5" />
+                <line x1="14" y1="5" x2="25" y2="10" stroke="#7C3AED" strokeWidth="2.5" />
+                <line x1="14" y1="5" x2="16" y2="1" stroke="#334155" strokeWidth="2" />
+                <rect x="2" y="3" width="7" height="6" rx="1" fill="#F59E0B" />
+              </g>
             </g>
           </svg>
         </div>
