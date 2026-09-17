@@ -475,10 +475,154 @@ function StepCards({ step }) {
   );
 }
 
+
+// Amazon Pay Sandbox Modal Component
+function AmazonPaySandboxModal({ isOpen, onClose, amount, onPaymentSuccess }) {
+  if (!isOpen) return null;
+
+  const [step, setStep] = useState("select"); // select | processing | success
+  const [method, setMethod] = useState("wallet");
+  const [logMessages, setLogMessages] = useState([]);
+
+  const handleProcessPayment = () => {
+    setStep("processing");
+    setLogMessages(["Initiating POST https://amazonpay-sandbox.amazon.in/checkoutSession..."]);
+
+    setTimeout(() => {
+      setLogMessages(prev => [...prev, "Calling Operation: ProcessPayment (Amazon Pay Sandbox India)..."]);
+    }, 600);
+
+    setTimeout(() => {
+      setLogMessages(prev => [...prev, "Sandbox Merchant Authorization: SUCCESS (200 OK)"]);
+    }, 1200);
+
+    setTimeout(() => {
+      setLogMessages(prev => [...prev, "Escrow Hold Locked in AWS DynamoDB (Order State: HELD)"]);
+    }, 1800);
+
+    setTimeout(() => {
+      setStep("success");
+      setTimeout(() => {
+        onPaymentSuccess();
+        onClose();
+      }, 1000);
+    }, 2400);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-zinc-200 overflow-hidden">
+        {/* Amazon Pay Header */}
+        <div className="bg-gradient-to-r from-[#232F3E] to-[#131921] text-white p-5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#FF9900] text-zinc-950 font-bold flex items-center justify-center text-sm shadow-sm">
+              a
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-base tracking-tight">amazon pay</span>
+                <span className="text-[9px] font-bold bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/40 px-1.5 py-0.5 rounded uppercase">Sandbox Test</span>
+              </div>
+              <p className="text-[10px] text-zinc-400 font-mono">https://amazonpay-sandbox.amazon.in</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-full text-zinc-400 hover:text-white transition-all">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 space-y-5">
+          {step === "select" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-zinc-50 p-3.5 rounded-2xl border border-zinc-200">
+                <div>
+                  <p className="text-xs text-zinc-500 font-medium">Payment Amount</p>
+                  <p className="text-2xl font-bold text-zinc-900">₹{amount}</p>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  Sandbox Active
+                </span>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2">Test Payment Instruments</p>
+                <div className="space-y-2">
+                  {[
+                    { id: "wallet", name: "Amazon Pay Balance", desc: "Sandbox balance: ₹15,000.00", badge: "Fastest" },
+                    { id: "upi", name: "Amazon Pay UPI (ICICI)", desc: "sandbox-user@okhitch", badge: "Verified" },
+                    { id: "card", name: "Amazon Pay ICICI Card", desc: "•••• 4022 | Exp 09/28", badge: "Test Card" },
+                  ].map(m => (
+                    <div key={m.id} onClick={() => setMethod(m.id)}
+                      className={"p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between " +
+                        (method === m.id ? "border-[#FF9900] bg-orange-50/50 shadow-xs" : "border-zinc-200 hover:bg-zinc-50")}>
+                      <div className="flex items-center gap-3">
+                        <div className={"w-4 h-4 rounded-full border flex items-center justify-center " +
+                          (method === m.id ? "border-[#FF9900] bg-[#FF9900]" : "border-zinc-300")}>
+                          {method === m.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-zinc-900">{m.name}</p>
+                          <p className="text-[10px] text-zinc-500">{m.desc}</p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold text-zinc-400 bg-white border border-zinc-200 px-2 py-0.5 rounded">
+                        {m.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 text-[10px] text-zinc-500 space-y-1">
+                <p className="font-semibold text-zinc-700">Sandbox Environment Notice:</p>
+                <p>This payment connects to <code>https://amazonpay-sandbox.amazon.in</code>. Zero real money is deducted. Escrow is locked for demonstration.</p>
+              </div>
+
+              <button onClick={handleProcessPayment}
+                className="w-full py-3.5 bg-[#FF9900] hover:bg-[#E68A00] text-zinc-950 font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2">
+                <span>Pay ₹{amount} with Amazon Pay Sandbox</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {step === "processing" && (
+            <div className="py-6 space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full border-4 border-[#FF9900] border-t-transparent animate-spin mx-auto" />
+              <div>
+                <p className="text-base font-bold text-zinc-900">Processing with Amazon Pay Sandbox</p>
+                <p className="text-xs text-zinc-500 mt-1">Connecting to Amazon Pay India payment engine...</p>
+              </div>
+
+              <div className="bg-zinc-900 text-emerald-400 font-mono text-[10px] p-3.5 rounded-xl text-left space-y-1.5 max-h-36 overflow-y-auto">
+                {logMessages.map((log, idx) => (
+                  <p key={idx} className="leading-tight">❯ {log}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === "success" && (
+            <div className="py-8 space-y-3 text-center animate-fadeIn">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900">Amazon Pay Sandbox: Authorized!</h3>
+              <p className="text-xs text-zinc-500">Transaction ID: AMZN-PAY-SANDBOX-{Math.floor(100000 + Math.random() * 900000)}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SenderPortal({ shipments, activeShipmentId, onAddShipment, onSelectPortal }) {
   const [screen, setScreen] = useState("home"); // home | create | payment
   const [wizardStep, setWizardStep] = useState(1);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [isAmazonPayModalOpen, setIsAmazonPayModalOpen] = useState(false);
   const [showAdvisorInWizard, setShowAdvisorInWizard] = useState(false);
   const [createdTrackingId, setCreatedTrackingId] = useState("HTX-4821");
 
@@ -541,6 +685,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "home") return (
     <div className="space-y-0 animate-fadeIn">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
+      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * 85 + 17)} onPaymentSuccess={handleDummyPayment} />
 
       {/* Hero split layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-4 pb-12">
@@ -725,6 +870,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "create") return (
     <div className="animate-fadeIn">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
+      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * 85 + 17)} onPaymentSuccess={handleDummyPayment} />
 
       {/* Page Header */}
       <div className="mb-8 flex items-center justify-between">
@@ -1075,6 +1221,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "payment") return (
     <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
+      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * 85 + 17)} onPaymentSuccess={handleDummyPayment} />
 
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-all">
@@ -1101,11 +1248,12 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                 <span>Escrow total</span><span className="text-hitchOrange">₹{Math.round((form.weightKg || 2) * 85 + 17)}</span>
               </div>
             </div>
-            <button onClick={handleDummyPayment}
-              className="w-full py-3.5 bg-hitchOrange text-white font-bold rounded-xl hover:bg-hitchOrange-hover shadow-lg shadow-hitchOrange/20 transition-all text-sm">
-              Pay &amp; Lock Escrow via Razorpay (1-Click Test)
+            <button onClick={() => setIsAmazonPayModalOpen(true)}
+              className="w-full py-3.5 bg-[#FF9900] hover:bg-[#E68A00] text-zinc-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all text-sm flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-xs font-bold">a</span>
+              <span>Pay &amp; Lock Escrow via Amazon Pay Sandbox</span>
             </button>
-            <p className="text-center text-xs text-zinc-400">Instant test checkout · Escrow auto-locks &amp; notifies carrier</p>
+            <p className="text-center text-xs text-zinc-400 font-mono">https://amazonpay-sandbox.amazon.in · Instant Sandbox Test Checkout</p>
           </div>
         </div>
       ) : (
