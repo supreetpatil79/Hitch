@@ -1,0 +1,205 @@
+{
+  "Comment": "Hitch Peer-to-Peer Commuter Delivery Lifecycle State Machine",
+  "StartAt": "HoldEscrow",
+  "States": {
+    "HoldEscrow": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TABLE_NAME}",
+        "Key": {
+          "PK": {
+            "S.$": "States.Format('MATCH#{}', $.match_id)"
+          },
+          "SK": {
+            "S": "HANDSHAKE"
+          }
+        },
+        "UpdateExpression": "SET match_status = :m_status, payment_status = :p_status, escrow_held_at = :now",
+        "ExpressionAttributeValues": {
+          ":m_status": {
+            "S": "SENDER_CONFIRMED"
+          },
+          ":p_status": {
+            "S": "ESCROW_HELD"
+          },
+          ":now": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "ResultPath": "$.escrow_result",
+      "Next": "WaitForCarrierAccept",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "RefundEscrow"
+        }
+      ]
+    },
+    "WaitForCarrierAccept": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+      "Parameters": {
+        "QueueUrl": "${CARRIER_NOTIF_QUEUE_URL}",
+        "MessageBody": {
+          "match_id.$": "$.match_id",
+          "task_token.$": "$$.Task.Token",
+          "action": "CARRIER_ACCEPTANCE_REQUIRED"
+        }
+      },
+      "ResultPath": "$.carrier_acceptance",
+      "TimeoutSeconds": 7200,
+      "Next": "PickupHandshake",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "RefundEscrow"
+        }
+      ]
+    },
+    "PickupHandshake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+      "Parameters": {
+        "QueueUrl": "${CARRIER_NOTIF_QUEUE_URL}",
+        "MessageBody": {
+          "match_id.$": "$.match_id",
+          "task_token.$": "$$.Task.Token",
+          "action": "PICKUP_OTP_REQUIRED"
+        }
+      },
+      "ResultPath": "$.pickup_result",
+      "TimeoutSeconds": 86400,
+      "Next": "InTransitTracking",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "RefundEscrow"
+        }
+      ]
+    },
+    "InTransitTracking": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TABLE_NAME}",
+        "Key": {
+          "PK": {
+            "S.$": "States.Format('MATCH#{}', $.match_id)"
+          },
+          "SK": {
+            "S": "HANDSHAKE"
+          }
+        },
+        "UpdateExpression": "SET match_status = :m_status, delivery_request_status = :d_status, picked_up_at = :now",
+        "ExpressionAttributeValues": {
+          ":m_status": {
+            "S": "IN_TRANSIT"
+          },
+          ":d_status": {
+            "S": "IN_TRANSIT"
+          },
+          ":now": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "ResultPath": "$.intransit_result",
+      "Next": "DeliveryDualHandshake",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "RefundEscrow"
+        }
+      ]
+    },
+    "DeliveryDualHandshake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+      "Parameters": {
+        "QueueUrl": "${CARRIER_NOTIF_QUEUE_URL}",
+        "MessageBody": {
+          "match_id.$": "$.match_id",
+          "task_token.$": "$$.Task.Token",
+          "action": "DELIVERY_OTP_REQUIRED"
+        }
+      },
+      "ResultPath": "$.delivery_result",
+      "TimeoutSeconds": 172800,
+      "Next": "ReleasePayout",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "RefundEscrow"
+        }
+      ]
+    },
+    "ReleasePayout": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TABLE_NAME}",
+        "Key": {
+          "PK": {
+            "S.$": "States.Format('MATCH#{}', $.match_id)"
+          },
+          "SK": {
+            "S": "HANDSHAKE"
+          }
+        },
+        "UpdateExpression": "SET match_status = :m_status, payment_status = :p_status, delivered_at = :now",
+        "ExpressionAttributeValues": {
+          ":m_status": {
+            "S": "DELIVERED"
+          },
+          ":p_status": {
+            "S": "RELEASED"
+          },
+          ":now": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    },
+    "RefundEscrow": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TABLE_NAME}",
+        "Key": {
+          "PK": {
+            "S.$": "States.Format('MATCH#{}', $.match_id)"
+          },
+          "SK": {
+            "S": "HANDSHAKE"
+          }
+        },
+        "UpdateExpression": "SET match_status = :m_status, payment_status = :p_status, cancelled_at = :now",
+        "ExpressionAttributeValues": {
+          ":m_status": {
+            "S": "CANCELLED"
+          },
+          ":p_status": {
+            "S": "REFUNDED"
+          },
+          ":now": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

@@ -67,6 +67,15 @@ Resources:
             ProjectionType: ALL
 
   # ============================================================================
+  # SQS NOTIFICATION QUEUE FOR WORKFLOW TASK TOKENS
+  # ============================================================================
+  CarrierNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: hitch-carrier-notification-queue
+      VisibilityTimeoutSeconds: 300
+
+  # ============================================================================
   # API GATEWAY (HTTP API)
   # ============================================================================
   HitchApi:
@@ -141,6 +150,45 @@ Resources:
                   - Name: prefix
                     Value: intake/
 
+  HandshakeServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/handshake_service/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HitchTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - states:SendTaskSuccess
+                - states:SendTaskFailure
+              Resource: "*"
+      Events:
+        HandshakeApi:
+          Type: HttpApi
+          Properties:
+            Path: /handshake/verify
+            Method: POST
+            ApiId: !Ref HitchApi
+
+  # ============================================================================
+  # STEP FUNCTIONS STATE MACHINE
+  # ============================================================================
+  HitchDeliveryStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: HitchDeliveryStateMachine
+      DefinitionUri: workflows/delivery_workflow.asl.json
+      DefinitionSubstitutions:
+        TABLE_NAME: !Ref HitchTable
+        CARRIER_NOTIF_QUEUE_URL: !Ref CarrierNotificationQueue
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HitchTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt CarrierNotificationQueue.QueueName
+
 Outputs:
   HitchApiUrl:
     Description: "HTTP API Gateway endpoint URL"
@@ -154,3 +202,6 @@ Outputs:
   BedrockInspectorFunctionArn:
     Description: "Bedrock Inspector Lambda Function ARN"
     Value: !GetAtt BedrockInspectorFunction.Arn
+  DeliveryStateMachineArn:
+    Description: "Step Functions Delivery Lifecycle State Machine ARN"
+    Value: !Ref HitchDeliveryStateMachine
