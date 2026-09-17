@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Hitch - Cloud-Native Peer-to-Peer Commuter Crowd-Shipping Platform Baseline SAM Template
+  Hitch - Cloud-Native Peer-to-Peer Commuter Crowd-Shipping Platform SAM Template
 
 Globals:
   Function:
@@ -105,6 +105,42 @@ Resources:
             Method: POST
             ApiId: !Ref HitchApi
 
+  BedrockInspectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/bedrock_inspector/
+      Handler: app.lambda_handler
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: anthropic.claude-3-5-sonnet-20241022-v2:0
+          BEDROCK_REGION: !Ref AWS::Region
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HitchTable
+        - S3ReadPolicy:
+            BucketName: !Ref HitchPackageVault
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource:
+                - "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
+                - "arn:aws:bedrock:*:*:inference-profile/*anthropic.claude-3-5-sonnet*"
+      Events:
+        S3ImageUploadEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref HitchPackageVault
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: intake/
+
 Outputs:
   HitchApiUrl:
     Description: "HTTP API Gateway endpoint URL"
@@ -115,3 +151,6 @@ Outputs:
   DynamoDBTableName:
     Description: "DynamoDB Single Table Name"
     Value: !Ref HitchTable
+  BedrockInspectorFunctionArn:
+    Description: "Bedrock Inspector Lambda Function ARN"
+    Value: !GetAtt BedrockInspectorFunction.Arn
