@@ -1,13 +1,15 @@
 import React, { useState } from "react";
-import { Package, Truck, BarChart3, Globe, BadgeCheck, Sparkles } from "lucide-react";
+import { Package, Truck, BarChart3, Globe, BadgeCheck, Sparkles, Wallet } from "lucide-react";
 import SenderPortal from "./components/SenderPortal";
 import CarrierPortal from "./components/CarrierPortal";
+import EarningsPortal from "./components/EarningsPortal";
 import AdminPortal from "./components/AdminPortal";
 
 const PORTALS = [
-  { id: "sender",  label: "Sender Portal",   icon: Package,   accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
-  { id: "carrier", label: "Carrier Portal",  icon: Truck,     accent: "bg-hitchBlue text-white",   tag: "hitch-blue" },
-  { id: "admin",   label: "Admin Dashboard", icon: BarChart3, accent: "bg-zinc-900 text-white",   tag: "admin" },
+  { id: "sender",   label: "Sender Portal",    icon: Package,   accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
+  { id: "carrier",  label: "Carrier Portal",   icon: Truck,     accent: "bg-hitchBlue text-white",   tag: "hitch-blue" },
+  { id: "earnings", label: "Carrier Wallet",   icon: Wallet,    accent: "bg-emerald-600 text-white", tag: "earnings" },
+  { id: "admin",    label: "Admin Dashboard",  icon: BarChart3, accent: "bg-zinc-900 text-white",   tag: "admin" },
 ];
 
 const INITIAL_SHIPMENTS = [
@@ -72,15 +74,83 @@ export default function App() {
   const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
   const [activeShipmentId, setActiveShipmentId] = useState("HTX-4821");
 
+  // Carrier Wallet State (synced with OTP handshakes in real time)
+  const [carrierWallet, setCarrierWallet] = useState({
+    availableBalance: 4200,
+    escrowPending: 260,
+    lifetimeEarned: 42300,
+    transactions: [
+      { id: "TXN-8842", type: "ESCROW_PAYOUT", description: "Delivered: Mumbai → Pune", route: "Mumbai → Pune", amount: 350, time: "Today 4:15 PM", status: "SETTLED" },
+      { id: "TXN-8840", type: "WITHDRAWAL", description: "Instant Withdrawal to Amazon Pay", route: "Amazon Pay Wallet", amount: 1500, time: "Yesterday", status: "COMPLETED" },
+      { id: "TXN-8835", type: "ESCROW_PAYOUT", description: "Delivered: Delhi → Chandigarh", route: "Delhi → Chandigarh", amount: 620, time: "Sep 15", status: "SETTLED" },
+    ]
+  });
+
   // Add new shipment from Sender Portal
   const handleAddShipment = (newPkg) => {
     setShipments(prev => [newPkg, ...prev]);
     setActiveShipmentId(newPkg.id);
+
+    // Increase escrow pending on new booking
+    setCarrierWallet(prev => ({
+      ...prev,
+      escrowPending: prev.escrowPending + (newPkg.payout || 180)
+    }));
   };
 
   // Update shipment status (e.g. MATCHED -> IN_TRANSIT -> DELIVERED)
   const handleUpdateStatus = (id, newStatus) => {
-    setShipments(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+    setShipments(prev => prev.map(s => {
+      if (s.id === id) {
+        return { ...s, status: newStatus };
+      }
+      return s;
+    }));
+
+    // If delivered, automatically credit the carrier wallet in real time!
+    if (newStatus === "DELIVERED") {
+      const targetPkg = shipments.find(s => s.id === id) || { payout: 180, from: "Origin", to: "Destination" };
+      const payoutAmount = targetPkg.payout || 180;
+
+      setCarrierWallet(prev => ({
+        ...prev,
+        availableBalance: prev.availableBalance + payoutAmount,
+        lifetimeEarned: prev.lifetimeEarned + payoutAmount,
+        escrowPending: Math.max(0, prev.escrowPending - payoutAmount),
+        transactions: [
+          {
+            id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
+            type: "ESCROW_PAYOUT",
+            description: `Delivered: ${targetPkg.from} → ${targetPkg.to}`,
+            route: `${targetPkg.from} → ${targetPkg.to}`,
+            amount: payoutAmount,
+            time: "Just now",
+            status: "SETTLED"
+          },
+          ...prev.transactions
+        ]
+      }));
+    }
+  };
+
+  // Handle Instant Withdrawal
+  const handleWithdraw = (amount, method) => {
+    setCarrierWallet(prev => ({
+      ...prev,
+      availableBalance: Math.max(0, prev.availableBalance - amount),
+      transactions: [
+        {
+          id: `TXN-WTH-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: "WITHDRAWAL",
+          description: `Instant Withdrawal to ${method === "amazonpay" ? "Amazon Pay Wallet" : "UPI Instant"}`,
+          route: method.toUpperCase(),
+          amount: amount,
+          time: "Just now",
+          status: "COMPLETED"
+        },
+        ...prev.transactions
+      ]
+    }));
   };
 
   return (
@@ -108,7 +178,7 @@ export default function App() {
           <nav className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200 gap-0.5">
             {PORTALS.map(({ id, label, icon: Icon, accent }) => (
               <button key={id} onClick={() => setPortal(id)}
-                className={"flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all " +
+                className={"flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all " +
                   (portal === id ? accent + " shadow-sm" : "text-zinc-500 hover:text-zinc-900 hover:bg-white/60")}>
                 <Icon className="w-4 h-4" />
                 <span className="hidden sm:inline">{label}</span>
@@ -116,16 +186,16 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Right: AWS badge */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-              <Sparkles className="w-4 h-4 text-violet-500" />
+          {/* Right: Carrier Wallet Balance Indicator */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setPortal("earnings")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 transition-all shadow-xs">
+              <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>₹{carrierWallet.availableBalance.toLocaleString()}</span>
+            </button>
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-zinc-500 border-l border-zinc-200 pl-3">
+              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
               <span>Bedrock AI</span>
-            </div>
-            <div className="w-px h-4 bg-zinc-200" />
-            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-              <BadgeCheck className="w-4 h-4 text-emerald-500" />
-              <span>Step Functions</span>
             </div>
           </div>
         </div>
@@ -147,6 +217,14 @@ export default function App() {
             activeShipmentId={activeShipmentId}
             onUpdateStatus={handleUpdateStatus}
             onSelectPortal={setPortal}
+            carrierWallet={carrierWallet}
+          />
+        )}
+        {portal === "earnings" && (
+          <EarningsPortal
+            carrierWallet={carrierWallet}
+            onWithdraw={handleWithdraw}
+            onSelectPortal={setPortal}
           />
         )}
         {portal === "admin"   && (
@@ -161,7 +239,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <span>Hitch Technology Platform · Section 79 IT Act 2000 · 173 Cities · Peer-to-Peer Intercity Logistics</span>
           <div className="flex items-center gap-2 flex-wrap justify-center">
-            {["Bedrock","Step Functions","S3","DynamoDB","API Gateway","Lambda","Amplify","SAM"].map(s => (
+            {["Bedrock","Step Functions","S3","DynamoDB","API Gateway","Lambda","Amplify","SAM","Amazon Pay"].map(s => (
               <span key={s} className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full border border-zinc-200 font-semibold text-[10px]">AWS {s}</span>
             ))}
           </div>

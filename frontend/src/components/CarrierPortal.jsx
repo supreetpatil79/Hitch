@@ -1070,10 +1070,16 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
                     Delivery Completed! Payout of ₹{pkg.payout}.00 released to your wallet.
                   </div>
                   <p className="text-xs text-zinc-500">The delivery lifecycle has closed in Step Functions. You can now switch to the Sender Portal to verify the real-time update!</p>
-                  <button onClick={() => onSelectPortal && onSelectPortal("sender")}
-                    className="mt-2 px-4 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 transition-all">
-                    View Sender Portal Status →
-                  </button>
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={() => onSelectPortal && onSelectPortal("earnings")}
+                      className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-xs flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" /> View Carrier Wallet &amp; Withdraw →
+                    </button>
+                    <button onClick={() => onSelectPortal && onSelectPortal("sender")}
+                      className="px-4 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 transition-all">
+                      View Sender Portal →
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
