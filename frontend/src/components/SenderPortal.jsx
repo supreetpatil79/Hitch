@@ -8,6 +8,46 @@ import {
   Bot, Send, Printer, FileText, X, AlertTriangle, ShieldCheck,
   Tag, Sliders, Image as ImageIcon, ChevronDown
 } from "lucide-react";
+import RoutePreviewIllustration from "./RoutePreviewIllustration";
+
+const MATCHED_CARRIERS = [
+  {
+    id: "c-1",
+    carrierName: "Rahul Verma",
+    mode: "train",
+    transportName: "Vande Bharat Express (20608)",
+    departure: "Today · 02:45 PM",
+    rating: "4.95",
+    completedTrips: 42,
+    payoutRate: 85,
+    badge: "Verified Regular",
+    speed: "130 km/h Track Speed"
+  },
+  {
+    id: "c-2",
+    carrierName: "Priya Menon",
+    mode: "flight",
+    transportName: "IndiGo Air (6E-512)",
+    departure: "Today · 05:20 PM",
+    rating: "5.0",
+    completedTrips: 88,
+    payoutRate: 110,
+    badge: "Frequent Flyer",
+    speed: "840 km/h Airway"
+  },
+  {
+    id: "c-3",
+    carrierName: "Vikram Singhania",
+    mode: "bus",
+    transportName: "KSRTC Airavat Club Class",
+    departure: "Tonight · 09:30 PM",
+    rating: "4.88",
+    completedTrips: 29,
+    payoutRate: 65,
+    badge: "Night Cruiser",
+    speed: "80 km/h Highway"
+  }
+];
 
 const CITIES = ["Bengaluru","Mumbai","Hyderabad","Delhi","Pune","Chennai",
                 "Kolkata","Ahmedabad","Jaipur","Surat","Kochi","Chandigarh",
@@ -516,10 +556,21 @@ function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
 }
 
 // Request snapshot sidebar
-function RequestSnapshot({ step, form, onOpenAdvisor }) {
+function RequestSnapshot({ step, form, selectedCarrier, onOpenAdvisor }) {
   const isComplete = form.category && form.weightKg > 0 && form.fromCity && form.toCity && form.recipientName;
   return (
     <div className="space-y-4">
+      {form.fromCity && form.toCity && (
+        <div className="animate-fadeIn">
+          <RoutePreviewIllustration
+            mode={selectedCarrier?.mode || "train"}
+            origin={form.fromCity}
+            destination={form.toCity}
+            transportName={selectedCarrier?.transportName}
+            carrierName={selectedCarrier?.carrierName}
+          />
+        </div>
+      )}
       <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Request snapshot</h3>
@@ -608,6 +659,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   const [isAmazonPayModalOpen, setIsAmazonPayModalOpen] = useState(false);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [createdTrackingId, setCreatedTrackingId] = useState("HTX-4821");
+  const [selectedCarrier, setSelectedCarrier] = useState(MATCHED_CARRIERS[0]);
 
   const [form, setForm] = useState({
     category: "Electronics", weightKg: 2, declaredValue: "12000",
@@ -650,7 +702,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
         category: form.category || "Electronics",
         weight: form.weightKg || 2.0,
         declaredValue: form.declaredValue || "12000",
-        payout: Math.round((form.weightKg || 2) * 75) || 180,
+        payout: Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85)),
         status: "MATCHED",
         pickupOtp: "4829",
         deliveryOtp: "7104",
@@ -658,8 +710,10 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
         sender: "You (Verified)",
         recipient: form.recipientName || "Aarav Sharma",
         recipientPhone: form.recipientPhone || "+91 98765 43210",
-        eta: "Today 6:30 PM",
-        carrier: "Rahul V."
+        eta: selectedCarrier?.departure || "Today 6:30 PM",
+        carrier: selectedCarrier?.carrierName || "Rahul Verma",
+        mode: selectedCarrier?.mode || "train",
+        transportName: selectedCarrier?.transportName || "Vande Bharat Express"
       });
     }
   };
@@ -991,7 +1045,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
 
             {/* STEP 3 */}
             {wizardStep === 3 && (
-              <div className="space-y-5 animate-fadeIn">
+              <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-white rounded-2xl border border-zinc-200 p-4">
                     <p className="text-[10px] font-bold uppercase text-zinc-400">Route</p>
@@ -1002,9 +1056,86 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                     <p className="text-base font-bold text-zinc-900 mt-1">{laneLoaded ? "3 verified" : "Searching..."}</p>
                   </div>
                   <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-                    <p className="text-[10px] font-bold uppercase text-zinc-400">Indicative Quote</p>
-                    <p className="text-base font-bold text-hitchOrange mt-1">₹{Math.round((form.weightKg || 2) * 85 + 17)}</p>
+                    <p className="text-[10px] font-bold uppercase text-zinc-400">Estimated Quote</p>
+                    <p className="text-base font-bold text-hitchOrange mt-1">₹{Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85) + 17)}</p>
                   </div>
+                </div>
+
+                {/* Verified Carriers Matching Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-hitchOrange" /> Available Verified Carriers on Corridor
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-0.5">Select a traveler to view route transit animation and lock their schedule</p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      LIVE ESCROW SECURED
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {MATCHED_CARRIERS.map(c => {
+                      const isSelected = selectedCarrier?.id === c.id;
+                      const Icon = c.mode === "train" ? Train : c.mode === "flight" ? Plane : Bus;
+                      const estCost = Math.round((form.weightKg || 2) * c.payoutRate + 17);
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => setSelectedCarrier(c)}
+                          className={"rounded-2xl p-4 border transition-all cursor-pointer text-left relative overflow-hidden " +
+                            (isSelected
+                              ? "bg-orange-50/40 border-hitchOrange ring-2 ring-hitchOrange/20 shadow-sm"
+                              : "bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-2xs")}>
+                          {isSelected && (
+                            <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-hitchOrange text-white flex items-center justify-center">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className={"w-8 h-8 rounded-xl flex items-center justify-center " +
+                              (c.mode === "train" ? "bg-emerald-100 text-emerald-700" :
+                               c.mode === "flight" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700")}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-zinc-900 leading-tight">{c.carrierName}</p>
+                              <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {c.rating} ({c.completedTrips} trips)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 text-[11px] border-t border-zinc-100 pt-2.5">
+                            <div className="text-zinc-700 font-medium truncate">{c.transportName}</div>
+                            <div className="text-zinc-400 text-[10px] flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-zinc-400" /> {c.departure}
+                            </div>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">{c.speed}</span>
+                              <span className="text-xs font-bold text-hitchOrange">₹{estCost}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected Carrier Route Visualizer Animation */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Live Route Transit Preview</p>
+                    <span className="text-[10px] font-semibold text-zinc-400">Mode: {selectedCarrier?.mode.toUpperCase()}</span>
+                  </div>
+                  <RoutePreviewIllustration
+                    mode={selectedCarrier?.mode || "train"}
+                    origin={form.fromCity}
+                    destination={form.toCity}
+                    transportName={selectedCarrier?.transportName}
+                    carrierName={selectedCarrier?.carrierName}
+                  />
                 </div>
 
                 <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 space-y-2 text-xs">
@@ -1033,7 +1164,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
 
         <div className="lg:col-span-4">
           <div className="sticky top-24">
-            <RequestSnapshot step={wizardStep} form={form} onOpenAdvisor={() => setIsAdvisorOpen(true)} />
+            <RequestSnapshot step={wizardStep} form={form} selectedCarrier={selectedCarrier} onOpenAdvisor={() => setIsAdvisorOpen(true)} />
           </div>
         </div>
       </div>
@@ -1044,7 +1175,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "payment") return (
     <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
-      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * 85 + 17)} onPaymentSuccess={handleDummyPayment} />
+      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85) + 17)} onPaymentSuccess={handleDummyPayment} />
 
       <div className="flex items-center gap-3">
         <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50">
@@ -1060,7 +1191,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
           <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
             <div>
               <p className="text-xs font-bold uppercase text-zinc-400">Escrow Total</p>
-              <p className="text-3xl font-bold text-zinc-900">₹{Math.round((form.weightKg || 2) * 85 + 17)}</p>
+              <p className="text-3xl font-bold text-zinc-900">₹{Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85) + 17)}</p>
             </div>
             <span className="text-xs font-bold bg-orange-50 text-hitchOrange px-3 py-1 rounded-full border border-orange-200">
               {form.fromCity} → {form.toCity}
@@ -1068,8 +1199,14 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
           </div>
 
           <div className="space-y-2.5 text-xs">
-            <div className="flex justify-between text-zinc-500"><span>Carrier Payout</span><span className="font-bold text-zinc-800">₹{Math.round((form.weightKg || 2) * 75)}</span></div>
-            <div className="flex justify-between text-zinc-500"><span>Platform Escrow Fee</span><span className="font-bold text-zinc-800">₹{Math.round((form.weightKg || 2) * 11 + 17)}</span></div>
+            <div className="flex justify-between text-zinc-500">
+              <span>Carrier Payout ({selectedCarrier?.carrierName || "Rahul Verma"})</span>
+              <span className="font-bold text-zinc-800">₹{Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85))}</span>
+            </div>
+            <div className="flex justify-between text-zinc-500">
+              <span>Platform Escrow &amp; Insurance Fee</span>
+              <span className="font-bold text-zinc-800">₹17</span>
+            </div>
           </div>
 
           <button onClick={() => setIsAmazonPayModalOpen(true)}
