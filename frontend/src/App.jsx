@@ -20,7 +20,7 @@ import {
   Info,
   Train,
   Car,
-  BusHand
+  Bus
 } from 'lucide-react';
 
 export default function App() {
@@ -455,7 +455,7 @@ export default function App() {
                       >
                         {mode === 'train' && <Train className="w-3.5 h-3.5" />}
                         {mode === 'car' && <Car className="w-3.5 h-3.5" />}
-                        {mode === 'bus' && <BusHand className="w-3.5 h-3.5" />}
+                        {mode === 'bus' && <Bus className="w-3.5 h-3.5" />}
                         {mode}
                       </button>
                     ))}
