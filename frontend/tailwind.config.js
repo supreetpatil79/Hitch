@@ -19,11 +19,21 @@ export default {
           hover: "#1D4ED8",
           light: "#EFF6FF",
         },
+        hitchEmerald: {
+          DEFAULT: "#10B981",
+          hover: "#059669",
+          light: "#ECFDF5",
+        },
         zincBorder: "#E4E4E7",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
         display: ["Instrument Serif", "serif"],
+      },
+      borderRadius: {
+        xl: "12px",
+        "2xl": "16px",
+        "3xl": "24px",
       },
     },
   },

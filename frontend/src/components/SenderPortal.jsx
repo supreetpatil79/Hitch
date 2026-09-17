@@ -1,275 +1,305 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Package, ArrowRight, ArrowLeft, ChevronRight, Search, Star,
-  MapPin, Clock, IndianRupee, Upload, CheckCircle2, Train, Car,
-  Bus, Plane, Bike, Navigation, Calendar, Sliders, Phone,
-  QrCode, Download, Shield, Zap, AlertCircle, CircleDot,
-  X, Check, ChevronDown, User, BadgeCheck
+  Package, ArrowRight, ArrowLeft, Search, Star, MapPin, Clock,
+  IndianRupee, Upload, CheckCircle2, Train, Car, Bus, Plane, Bike,
+  Navigation, Phone, QrCode, Download, Shield, Zap, AlertCircle,
+  CircleDot, Check, User, BadgeCheck, Sparkles, ChevronRight,
+  RotateCcw, RefreshCw, Eye, Navigation2, Truck
 } from "lucide-react";
 
-const CITIES = ["Mumbai", "Pune", "Delhi", "Bengaluru", "Hyderabad", "Chennai",
-                "Kolkata", "Ahmedabad", "Jaipur", "Surat", "Kochi", "Chandigarh"];
-const HUBS = {
-  "Mumbai": ["Dadar Station", "CST Station", "Bandra Terminus", "LTT Station"],
-  "Pune": ["Shivajinagar Station", "Pune Junction", "Khadki Station"],
-  "Bengaluru": ["KSR (Majestic) Station", "Yeshvanthpur Station", "KEMPEGOWDA ISBT"],
-  "Hyderabad": ["Secunderabad Junction", "Kacheguda Station", "Hyderabad Deccan"],
-  "Delhi": ["New Delhi Station", "Hazrat Nizamuddin", "ISBT Kashmere Gate"],
-  "Chennai": ["Chennai Central", "Tambaram Station", "CMBT Bus Stand"],
-  "default": ["Main Railway Station", "Central Bus Terminal", "City Hub"],
-};
-const getHub = (city) => HUBS[city] || HUBS["default"];
+const CITIES = ["Mumbai","Pune","Delhi","Bengaluru","Hyderabad","Chennai",
+                "Kolkata","Ahmedabad","Jaipur","Surat","Kochi","Chandigarh",
+                "Nagpur","Indore","Bhopal","Patna","Lucknow","Agra"];
 
-const CATEGORIES = ["Documents", "Clothing", "Electronics", "Food", "Fragile", "Medicine"];
-const CAT_COLORS = {
-  Documents: "bg-blue-50 text-blue-700 border-blue-200",
-  Clothing:  "bg-pink-50 text-pink-700 border-pink-200",
-  Electronics: "bg-violet-50 text-violet-700 border-violet-200",
-  Food:      "bg-amber-50 text-amber-700 border-amber-200",
-  Fragile:   "bg-red-50 text-red-700 border-red-200",
-  Medicine:  "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-const MOCK_SHIPMENTS = [
-  { id: "HTX-4821", from: "Mumbai", to: "Pune", status: "IN_TRANSIT", carrier: "Rahul V.", weight: 1.5, eta: "Today 6:30 PM" },
-  { id: "HTX-4755", from: "Bengaluru", to: "Hyderabad", status: "MATCHED", carrier: "Priya S.", weight: 0.8, eta: "Today 4:00 PM" },
-  { id: "HTX-4710", from: "Delhi", to: "Chandigarh", status: "DELIVERED", carrier: "Amit K.", weight: 2.1, eta: "Delivered" },
-  { id: "HTX-4690", from: "Mumbai", to: "Surat", status: "SEARCHING_RADAR", carrier: null, weight: 0.5, eta: "Searching..." },
-];
-const STATUS_STYLE = {
-  SEARCHING_RADAR: "bg-amber-100 text-amber-800 border-amber-300",
-  MATCHED:         "bg-blue-100 text-blue-800 border-blue-300",
-  IN_TRANSIT:      "bg-hitchOrange/15 text-hitchOrange border-hitchOrange/40",
-  DELIVERED:       "bg-emerald-100 text-emerald-800 border-emerald-300",
-};
-
-const MOCK_CARRIERS = [
-  { id: 1, name: "Rahul Verma", rating: 4.9, trips: 143, mode: "Vande Bharat Express", modeIcon: Train,
-    depart: "08:00 AM", arrive: "11:05 AM", duration: "3h 5m", carrierFee: 120, platformFee: 17.70 },
-  { id: 2, name: "Priya Sharma", rating: 4.8, trips: 97, mode: "AC Sleeper Bus (SRS)",  modeIcon: Bus,
-    depart: "09:30 AM", arrive: "01:20 PM", duration: "3h 50m", carrierFee: 80, platformFee: 11.80 },
-  { id: 3, name: "Arun Nair",   rating: 4.7, trips: 62, mode: "Private Car (Swift DZ)", modeIcon: Car,
-    depart: "11:00 AM", arrive: "01:45 PM", duration: "2h 45m", carrierFee: 150, platformFee: 22.13 },
+const ACTIVE_CORRIDORS = [
+  { from:"BLR", to:"HYD", mode:"Train",  icon: Train,  transit:"~5h transit",  live:true },
+  { from:"DEL", to:"MUM", mode:"Flight", icon: Plane,  transit:"~2.5h transit", live:true },
+  { from:"CHN", to:"BLR", mode:"Bus",    icon: Bus,    transit:"~7h transit",  live:true },
+  { from:"PNQ", to:"BLR", mode:"Train",  icon: Train,  transit:"~4h transit",  live:true },
 ];
 
-const StatusPill = ({ status }) => (
-  <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full border " + (STATUS_STYLE[status] || "bg-zinc-100 text-zinc-600")}>
-    {status.replace(/_/g, " ")}
-  </span>
-);
+const LIVE_FEED_ITEMS = [
+  "Delivered", "DEL → MUM - In Transit", "PNQ → BLR - Matched",
+  "CHN → BLR - Delivered", "HYD → DEL - In Transit", "MUM → PNQ - Matched",
+  "BLR → HYD - Delivered", "AGR → DEL - In Transit", "KOL → DEL - Matched",
+];
 
-function StepIndicator({ step }) {
-  const steps = ["Route", "Parcel", "Verify"];
+const TRUST_BADGES = [
+  { icon: Shield, title: "Verified travelers only", desc: "Route discovery and matching stay limited to authenticated carriers." },
+  { icon: Zap,    title: "OTP-secured handoff",     desc: "Pickup and drop-off stay tied to recipient identity, route, and timing." },
+  { icon: Eye,    title: "Live route visibility",   desc: "Lane demand, carrier availability, and next steps update without changing your APIs." },
+];
+
+const HOW_IT_WORKS = [
+  { n:"01", title:"Post your package",       icon: Package,       desc:"Enter pickup & drop cities, parcel weight, and recipient details. Under 90 seconds." },
+  { n:"02", title:"Instant carrier match",   icon: Truck,         desc:"Our engine matches you with a verified traveler already headed to your destination." },
+  { n:"03", title:"OTP-secured handoff",     icon: Shield,        desc:"Carrier receives the parcel only after verifying your 6-digit Pickup OTP. Zero trust." },
+  { n:"04", title:"Delivered. Escrow released.", icon: CheckCircle2, desc:"Recipient confirms with the Delivery OTP. Payment is released automatically. Done." },
+];
+
+// Live ticker
+function LiveTicker() {
+  const [offset, setOffset] = useState(0);
+  const items = [...LIVE_FEED_ITEMS, ...LIVE_FEED_ITEMS];
+  useEffect(() => {
+    const interval = setInterval(() => setOffset(o => o + 1), 30);
+    return () => clearInterval(interval);
+  }, []);
+  const DOT = { DELIVERED: "bg-emerald-400", "IN TRANSIT": "bg-hitchOrange", MATCHED: "bg-blue-400" };
   return (
-    <div className="flex items-center gap-2 mb-8">
-      {steps.map((s, i) => {
-        const idx = i + 1;
-        const done = step > idx;
-        const active = step === idx;
-        return (
-          <React.Fragment key={s}>
-            <div className="flex items-center gap-2">
-              <div className={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all " +
-                (done ? "bg-emerald-500 text-white" : active ? "bg-hitchOrange text-white ring-4 ring-hitchOrange/20" : "bg-zinc-100 text-zinc-400 border border-zinc-200")}>
-                {done ? <Check className="w-4 h-4" /> : idx}
-              </div>
-              <span className={"text-sm font-medium " + (active ? "text-zinc-900" : "text-zinc-400")}>{s}</span>
+    <div className="border-t border-b border-zinc-100 py-3 overflow-hidden relative">
+      <div className="flex items-center gap-2 mb-2 px-1">
+        <CircleDot className="w-3.5 h-3.5 text-hitchOrange animate-pulse shrink-0" />
+        <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Live Delivery Feed</span>
+        <span className="ml-auto text-xs text-hitchOrange font-semibold">All corridors →</span>
+      </div>
+      <div className="flex items-center gap-8 overflow-hidden whitespace-nowrap"
+           style={{ transform: `translateX(-${offset % 600}px)`, transition: "none" }}>
+        {items.map((item, i) => {
+          const upperItem = item.toUpperCase();
+          const status = upperItem.includes("DELIVERED") ? "DELIVERED"
+                       : upperItem.includes("IN TRANSIT") ? "IN TRANSIT"
+                       : "MATCHED";
+          return (
+            <div key={i} className="flex items-center gap-2 shrink-0">
+              <div className={"w-1.5 h-1.5 rounded-full " + (DOT[status] || "bg-zinc-400")} />
+              <span className="text-xs text-zinc-600">{item}</span>
             </div>
-            {i < 2 && <div className={"flex-1 h-0.5 rounded " + (step > idx ? "bg-emerald-400" : "bg-zinc-200")} />}
-          </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Request snapshot sidebar
+function RequestSnapshot({ step, form }) {
+  const isComplete = form.category && form.weightKg > 0 && form.fromCity && form.toCity && form.recipientName;
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Request snapshot</h3>
+          <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full border " +
+            (isComplete ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200")}>
+            {isComplete ? "READY" : "INCOMPLETE"}
+          </span>
+        </div>
+        {[
+          { icon: Navigation2, label: "Lane", value: form.fromCity && form.toCity ? `${form.fromCity} → ${form.toCity}` : "Route pending", done: !!(form.fromCity && form.toCity) },
+          { icon: Package, label: "Package", value: form.category ? `${form.category.toLowerCase()} · ${form.weightKg} kg` : "documents · 0 kg", done: !!(form.category && form.weightKg > 0) },
+          { icon: User, label: "Recipient", value: form.recipientName || "Add recipient details", done: !!form.recipientName },
+          { icon: Clock, label: "Pickup window", value: form.pickupEarliest ? "Window set" : "Select delivery timing", done: !!form.pickupEarliest },
+        ].map(item => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="flex items-start gap-3">
+              <div className={"w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 " +
+                (item.done ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400")}>
+                <Icon className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-zinc-400">{item.label}</p>
+                <p className={"text-xs font-semibold mt-0.5 " + (item.done ? "text-zinc-800" : "text-zinc-400")}>{item.value}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 space-y-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Operational safeguards</h3>
+        <ul className="space-y-2 text-xs text-zinc-500 leading-relaxed">
+          <li className="flex items-start gap-2"><span className="text-hitchOrange mt-0.5 shrink-0">·</span> Only selected city suggestions are used for route matching, which keeps downstream pricing and carrier ranking reliable.</li>
+          <li className="flex items-start gap-2"><span className="text-hitchOrange mt-0.5 shrink-0">·</span> Recipient contact and pickup timing stay in the same request payload, so existing OTP, payment, and match flows continue unchanged.</li>
+          <li className="flex items-start gap-2"><span className="text-hitchOrange mt-0.5 shrink-0">·</span> Lane intelligence uses the live trip feed you already have. If pricing or supply cannot be loaded, submission still works.</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// Step indicator cards
+function StepCards({ step }) {
+  const steps = [
+    { n: 1, label: "Package details",    desc: "Describe the parcel, weight, value, and handling expectations." },
+    { n: 2, label: "Route and recipient", desc: "Confirm the cities, delivery contact, and pickup time window." },
+    { n: 3, label: "Review and submit",   desc: "Check live lane demand and publish the request to verified carriers." },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-8">
+      {steps.map(s => {
+        const done   = step > s.n;
+        const active = step === s.n;
+        return (
+          <div key={s.n} className={"rounded-xl border p-4 transition-all " +
+            (done   ? "border-emerald-200 bg-emerald-50/60" :
+             active ? "border-hitchOrange/40 bg-hitchOrange/5 shadow-sm" :
+                      "border-zinc-200 bg-white")}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={"w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 " +
+                (done ? "bg-emerald-500 text-white" : active ? "bg-hitchOrange text-white" : "bg-zinc-200 text-zinc-500")}>
+                {done ? <Check className="w-3.5 h-3.5" /> : s.n}
+              </div>
+              <span className={"text-xs font-bold " + (active ? "text-zinc-900" : done ? "text-emerald-700" : "text-zinc-400")}>{s.label}</span>
+            </div>
+            <p className={"text-[10px] leading-relaxed " + (active ? "text-zinc-500" : "text-zinc-400")}>{s.desc}</p>
+          </div>
         );
       })}
     </div>
   );
 }
 
-function RadarDisplay({ from, to }) {
-  const [foundIdx, setFoundIdx] = useState(null);
-  React.useEffect(() => {
-    const t = setTimeout(() => setFoundIdx(0), 2800);
-    return () => clearTimeout(t);
-  }, []);
-  return (
-    <div className="flex flex-col items-center gap-6 py-4">
-      <p className="text-sm text-zinc-500 font-medium">Scanning corridor <strong className="text-zinc-900">{from} → {to}</strong> for verified carriers...</p>
-      <div className="relative w-72 h-72 flex items-center justify-center">
-        {[1,2,3,4].map(r => (
-          <div key={r} className={"absolute inset-0 rounded-full border-2 border-hitchOrange/50 animate-radar-" + r} />
-        ))}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative w-full h-full animate-sweep origin-center">
-            <div className="absolute top-1/2 left-1/2 w-1/2 h-0.5 bg-gradient-to-r from-hitchOrange/80 to-transparent origin-left -translate-y-1/2" />
-          </div>
-        </div>
-        <div className="relative z-10 bg-white rounded-full w-16 h-16 flex flex-col items-center justify-center shadow-lg border-2 border-hitchOrange/30">
-          <Navigation className="w-6 h-6 text-hitchOrange" />
-          <span className="text-[9px] font-bold text-zinc-500 mt-0.5">RADAR</span>
-        </div>
-        {foundIdx !== null && (
-          <>
-            <div className="absolute top-6 right-10 w-3 h-3 bg-hitchOrange rounded-full shadow-lg animate-pulse" />
-            <div className="absolute bottom-12 left-8 w-2.5 h-2.5 bg-hitchOrange/70 rounded-full shadow animate-pulse" style={{animationDelay:'0.3s'}} />
-            <div className="absolute top-1/2 right-4 w-2 h-2 bg-hitchOrange/50 rounded-full animate-pulse" style={{animationDelay:'0.6s'}} />
-          </>
-        )}
-      </div>
-      {foundIdx !== null
-        ? <p className="text-sm font-semibold text-emerald-700 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {MOCK_CARRIERS.length} verified carriers found!</p>
-        : <p className="text-xs text-zinc-400 animate-pulse-dot">Searching active corridors...</p>}
-    </div>
-  );
-}
-
 export default function SenderPortal() {
-  const [screen, setScreen] = useState("home"); // home | create | radar | payment
+  const [screen, setScreen] = useState("home"); // home | create | payment
   const [wizardStep, setWizardStep] = useState(1);
 
-  // Quick action form
-  const [qa, setQa] = useState({ from: "Mumbai", to: "Pune", date: "today", weight: 2 });
-
-  // Wizard form
   const [form, setForm] = useState({
-    fromCity: "Mumbai", fromHub: "Dadar Station",
-    toCity: "Pune", toHub: "Shivajinagar Station",
-    category: "Electronics", weightKg: 1.5,
-    dimL: 30, dimW: 20, dimH: 10,
-    declaredValue: 12000, fragile: false, photoFile: null,
-    banknoteSerial: "", pickupTime: "morning",
+    category: "Documents", weightKg: 0, declaredValue: "",
+    photoUrl: "", description: "", fragile: false,
+    fromCity: "", toCity: "",
+    recipientName: "", recipientPhone: "", recipientAddress: "",
+    pickupEarliest: "", pickupLatest: "",
+    banknoteSerial: "",
   });
-  const [selectedCarrier, setSelectedCarrier] = useState(null);
+
+  const [weightError, setWeightError] = useState("");
   const [pickupOtp] = useState("4829");
   const [payDone, setPayDone] = useState(false);
+  const [laneLoaded, setLaneLoaded] = useState(false);
 
-  const toggleCat = (cat) => setForm(f => ({ ...f, category: cat }));
+  useEffect(() => {
+    if (screen === "create" && wizardStep === 3) {
+      setLaneLoaded(false);
+      const t = setTimeout(() => setLaneLoaded(true), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [screen, wizardStep]);
+
+  const setWeight = (v) => {
+    const n = parseFloat(v) || 0;
+    setForm(f => ({ ...f, weightKg: n }));
+    setWeightError(n > 30 ? "Weight cannot exceed 30 kg for passenger baggage" : "");
+  };
 
   // ─── HOME ───────────────────────────────────────────────────────────────────
   if (screen === "home") return (
-    <div className="space-y-10 animate-fadeIn">
-      {/* Hero */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 px-10 py-14 text-white">
-        <div className="absolute inset-0 bg-gradient-to-tr from-hitchOrange/20 to-transparent pointer-events-none" />
-        <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 rounded-full bg-hitchOrange animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-hitchOrange">Hitch Logistics Network</span>
+    <div className="space-y-0 animate-fadeIn">
+      {/* Hero split layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-4 pb-12">
+        {/* Left: Hero copy */}
+        <div className="flex flex-col justify-center space-y-6">
+          <div className="inline-flex items-center gap-2 self-start">
+            <span className="w-2 h-2 rounded-full bg-hitchOrange" />
+            <span className="text-xs font-semibold text-zinc-600">Same-day intercity delivery — 173 cities</span>
           </div>
-          <h1 className="font-display text-5xl leading-tight mb-4">
-            Same-Day Intercity Courier<br />via Verified Travelers.
-          </h1>
-          <p className="text-zinc-300 text-lg mb-8">
-            Your parcel rides with real commuters — secured by AWS escrow, Bedrock AI inspection, and dual OTP handshakes.
+
+          <div>
+            <h1 className="text-5xl lg:text-6xl font-bold text-zinc-900 leading-tight">Your package travels</h1>
+            <h1 className="font-display text-5xl lg:text-6xl italic text-hitchOrange leading-tight">with people.</h1>
+          </div>
+
+          <p className="text-zinc-500 text-base leading-relaxed max-w-md">
+            Hitch matches your parcel with verified travelers already going your way. Faster than couriers. Cheaper than air cargo. Every handoff secured by OTP.
           </p>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setScreen("create")}
-              className="flex items-center gap-2 px-8 py-3.5 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover transition-all shadow-lg shadow-hitchOrange/30 text-sm">
-              Send a Parcel <ArrowRight className="w-4 h-4" />
+
+          <div className="flex items-center gap-3">
+            <button onClick={() => { setScreen("create"); setWizardStep(1); }}
+              className="flex items-center gap-2 px-6 py-3 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-md shadow-hitchOrange/20 transition-all text-sm">
+              Send a package <ArrowRight className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-1.5 text-zinc-300 text-sm">
-              <BadgeCheck className="w-4 h-4 text-emerald-400" />
-              <span>173 cities · 12,000+ verified carriers</span>
+            <button className="px-6 py-3 border border-zinc-200 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-50 transition-all text-sm">
+              Browse carriers
+            </button>
+          </div>
+
+          {/* Social proof */}
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {["#FF5C28","#2563EB","#10B981","#8B5CF6"].map((c, i) => (
+                <div key={i} className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: c }}>
+                  {["PM","AT","SK","ND"][i]}
+                </div>
+              ))}
             </div>
+            <span className="text-sm text-zinc-500"><strong className="text-zinc-900">2,400+</strong> packages delivered safely</span>
           </div>
         </div>
-        {/* decorative */}
-        <div className="absolute right-10 top-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
-          <Package className="w-64 h-64 text-white" />
+
+        {/* Right: Active Corridors */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Active Corridors Now</span>
+            <span className="text-xs text-hitchOrange font-semibold">View all →</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {ACTIVE_CORRIDORS.map((c, i) => {
+              const Icon = c.icon;
+              return (
+                <div key={i} className="bg-white rounded-xl border border-zinc-200 shadow-sm p-4 hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-sm font-bold text-zinc-400">{c.from}</span>
+                        <span className="text-zinc-300">→</span>
+                        <span className="text-sm font-bold text-zinc-900">{c.to}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                        <Icon className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>{c.mode}</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">{c.transit}</p>
+                    </div>
+                    {c.live && (
+                      <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 mt-2">
+            {[["173","Cities"],["4.5h","Avg transit"],["₹180","Avg costing"]].map(([v, l]) => (
+              <div key={l} className="bg-white rounded-xl border border-zinc-200 shadow-sm p-4 text-center">
+                <p className="text-2xl font-bold text-zinc-900">{v}</p>
+                <p className="text-[10px] text-zinc-400 uppercase font-bold mt-0.5">{l}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Quick Action Bar */}
-      <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Quick Parcel Search</h3>
-        <div className="flex flex-col sm:flex-row items-stretch gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">From City</label>
-            <select value={qa.from} onChange={e => setQa({...qa, from: e.target.value})}
-              className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm font-medium bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-hitchOrange/50">
-              {CITIES.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="flex items-end justify-center pb-1">
-            <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zincBorder flex items-center justify-center">
-              <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-            </div>
-          </div>
-          <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">To City</label>
-            <select value={qa.to} onChange={e => setQa({...qa, to: e.target.value})}
-              className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm font-medium bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-hitchOrange/50">
-              {CITIES.filter(c => c !== qa.from).map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Date</label>
-            <select value={qa.date} onChange={e => setQa({...qa, date: e.target.value})}
-              className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm font-medium bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-hitchOrange/50">
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Weight: {qa.weight}kg</label>
-            <input type="range" min="0.5" max="10" step="0.5" value={qa.weight}
-              onChange={e => setQa({...qa, weight: parseFloat(e.target.value)})}
-              className="w-full accent-hitchOrange mt-2" />
-          </div>
-          <button onClick={() => { setForm(f => ({...f, fromCity: qa.from, toCity: qa.to, weightKg: qa.weight})); setScreen("radar"); }}
-            className="flex items-center gap-2 px-6 py-2.5 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-md transition-all text-sm self-end">
-            <Search className="w-4 h-4" /> Find Carriers
-          </button>
-        </div>
-      </div>
-
-      {/* Active Shipments Carousel */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-zinc-900">Active Shipments</h3>
-          <span className="text-xs font-semibold text-hitchOrange">View All →</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {MOCK_SHIPMENTS.map(s => (
-            <div key={s.id} className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 hover:shadow-md transition-all space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-zinc-400">{s.id}</span>
-                <StatusPill status={s.status} />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 text-sm font-bold text-zinc-900">
-                  <MapPin className="w-3.5 h-3.5 text-hitchOrange shrink-0" /> {s.from}
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-zinc-500 ml-5">
-                  <ArrowRight className="w-3 h-3" /> {s.to}
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-100 pt-3">
-                <span>{s.weight}kg</span>
-                {s.carrier && <span className="font-medium text-zinc-700">via {s.carrier}</span>}
-                <span className="text-hitchOrange font-medium">{s.eta}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Live delivery feed ticker */}
+      <LiveTicker />
 
       {/* How it works */}
-      <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-8">
-        <h3 className="text-lg font-bold text-zinc-900 mb-6">How Hitch Works</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-          {[
-            { n: 1, title: "Create Request", desc: "Describe your parcel, snap a photo for Bedrock AI inspection.", icon: Package },
-            { n: 2, title: "Radar Match",    desc: "Our algorithm matches you with verified commuters on your corridor.", icon: Search },
-            { n: 3, title: "Secure Pickup",  desc: "Exchange 4-digit OTP + ₹10 banknote seal code at the station.", icon: Shield },
-            { n: 4, title: "Delivery Done",  desc: "Recipient confirms with OTP. Escrow auto-releases to carrier.", icon: CheckCircle2 },
-          ].map(item => {
+      <div className="pt-14 pb-6">
+        <div className="text-center mb-10">
+          <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">How it works</span>
+          <h2 className="text-3xl font-bold text-zinc-900 mt-2">
+            Send in 4 steps. <span className="font-display italic text-hitchOrange">Simple.</span>
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {HOW_IT_WORKS.map(item => {
             const Icon = item.icon;
             return (
-              <div key={item.n} className="flex flex-col items-center text-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-hitchOrange/10 flex items-center justify-center text-hitchOrange">
-                  <Icon className="w-6 h-6" />
+              <div key={item.n} className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 space-y-4 hover:shadow-md transition-all">
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-zinc-500" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-200">{item.n}</span>
                 </div>
                 <div>
                   <p className="font-bold text-zinc-900 text-sm">{item.title}</p>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.desc}</p>
+                  <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
             );
@@ -281,366 +311,419 @@ export default function SenderPortal() {
 
   // ─── CREATE WIZARD ───────────────────────────────────────────────────────────
   if (screen === "create") return (
-    <div className="max-w-2xl mx-auto animate-fadeIn">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => setScreen("home")} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-all">
-          <ArrowLeft className="w-4 h-4 text-zinc-500" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Create Delivery Request</h1>
-          <p className="text-sm text-zinc-500">Fill in parcel details to find matched carriers</p>
-        </div>
+    <div className="animate-fadeIn">
+      {/* Page Header */}
+      <div className="mb-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Sender Workflow</p>
+        <h1 className="text-3xl font-bold text-zinc-900">Create a secure delivery request</h1>
+        <p className="text-zinc-500 text-sm mt-2 max-w-xl">
+          Set the parcel details, lock in the pickup window, and publish to verified travelers without changing your existing delivery flow.
+        </p>
       </div>
 
-      <StepIndicator step={wizardStep} />
-
-      <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-8 space-y-6">
-
-        {/* STEP 1 */}
-        {wizardStep === 1 && (
-          <div className="space-y-5 animate-fadeIn">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2"><Navigation className="w-4 h-4 text-hitchOrange" /> Origin &amp; Destination</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">From City</label>
-                  <select value={form.fromCity} onChange={e => setForm({...form, fromCity: e.target.value, fromHub: getHub(e.target.value)[0]})}
-                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50 bg-zinc-50">
-                    {CITIES.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Pickup Hub / Station</label>
-                  <select value={form.fromHub} onChange={e => setForm({...form, fromHub: e.target.value})}
-                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50 bg-zinc-50">
-                    {getHub(form.fromCity).map(h => <option key={h}>{h}</option>)}
-                  </select>
-                </div>
+      {/* Trust badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {TRUST_BADGES.map(b => {
+          const Icon = b.icon;
+          return (
+            <div key={b.title} className="bg-white rounded-xl border border-zinc-200 shadow-sm p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-zinc-500" />
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">To City</label>
-                  <select value={form.toCity} onChange={e => setForm({...form, toCity: e.target.value, toHub: getHub(e.target.value)[0]})}
-                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50 bg-zinc-50">
-                    {CITIES.filter(c => c !== form.fromCity).map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Dropoff Hub / Station</label>
-                  <select value={form.toHub} onChange={e => setForm({...form, toHub: e.target.value})}
-                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50 bg-zinc-50">
-                    {getHub(form.toCity).map(h => <option key={h}>{h}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="bg-hitchOrange/5 border border-hitchOrange/20 rounded-xl p-4 flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-hitchOrange shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-zinc-900">{form.fromCity} ({form.fromHub}) → {form.toCity} ({form.toHub})</p>
-                <p className="text-xs text-zinc-500 mt-0.5">Carrier will collect at origin hub and drop at destination hub</p>
+                <p className="text-xs font-bold text-zinc-900">{b.title}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5 leading-relaxed">{b.desc}</p>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })}
+      </div>
 
-        {/* STEP 2 */}
-        {wizardStep === 2 && (
-          <div className="space-y-5 animate-fadeIn">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2"><Package className="w-4 h-4 text-hitchOrange" /> Parcel Specification</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main form */}
+        <div className="lg:col-span-8">
+          <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-7 space-y-6">
+            {/* Section label */}
             <div>
-              <label className="block text-xs font-bold uppercase text-zinc-400 mb-2">Category</label>
-              <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map(cat => (
-                  <button key={cat} type="button" onClick={() => toggleCat(cat)}
-                    className={"px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all " +
-                      (form.category === cat ? "bg-hitchOrange text-white border-hitchOrange shadow-sm" : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100")}>
-                    {cat}
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-0.5">Dispatch Request</p>
+              <h2 className="text-xl font-bold text-zinc-900">
+                {wizardStep === 1 ? "Package details" : wizardStep === 2 ? "Route and recipient" : "Review and submit"}
+              </h2>
+              <p className="text-xs text-zinc-500 mt-1">
+                {wizardStep === 1 ? "Describe the parcel, weight, value, and handling expectations."
+                 : wizardStep === 2 ? "Confirm the cities, delivery contact, and pickup time window."
+                 : "Check live lane demand and publish the request to verified carriers."}
+              </p>
+            </div>
+
+            <StepCards step={wizardStep} />
+
+            {/* ─ STEP 1 ─ */}
+            {wizardStep === 1 && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Package Category</label>
+                    <select value={form.category} onChange={e => setForm({...form, category: e.target.value})}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40 bg-white">
+                      {["Documents","Electronics","Clothing","Medicine","Food","Fragile"].map(c => <option key={c}>{c}</option>)}
+                    </select>
+                    <p className="text-[10px] text-zinc-400 mt-1">Used to filter carrier matches and shape pricing guidance.</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500">Package Weight</label>
+                      <span className="text-[10px] font-bold text-red-500">REQUIRED</span>
+                    </div>
+                    <div className="relative">
+                      <input type="number" step="0.5" min="0" value={form.weightKg || ""}
+                        onChange={e => setWeight(e.target.value)}
+                        className={"w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 pr-10 " +
+                          (weightError ? "border-red-300 focus:ring-red-300/40" : "border-zinc-200 focus:ring-hitchOrange/40")}
+                        placeholder="0" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">KG</span>
+                    </div>
+                    {weightError
+                      ? <p className="text-[10px] text-red-500 mt-1 font-medium">{weightError}</p>
+                      : <p className="text-[10px] text-zinc-400 mt-1">Only enter the parcel weight, not outer packaging or tote.</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Declared Value</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400 font-medium">Rs.</span>
+                      <input type="number" value={form.declaredValue} onChange={e => setForm({...form, declaredValue: e.target.value})}
+                        className="w-full pl-10 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
+                        placeholder="" />
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-1">Optional, but useful for support and payout review.</p>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Photo URL</label>
+                    <input type="url" value={form.photoUrl} onChange={e => setForm({...form, photoUrl: e.target.value})}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
+                      placeholder="https://..." />
+                    <p className="text-[10px] text-zinc-400 mt-1">Optional reference photo for the carrier during pickup.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500">Package Description</label>
+                    <span className="text-[10px] font-bold text-red-500">Required</span>
+                  </div>
+                  <textarea rows={3} value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40 resize-none" />
+                  <p className="text-[10px] text-zinc-400 mt-1">Mention what it is and anything the carrier should know before pickup.</p>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border border-zinc-200 rounded-xl bg-zinc-50/50">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-semibold text-zinc-900">Special Handling</p>
+                      {form.fragile && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 rounded-full">
+                          ⚠ Fragile Item
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400">Flag delicate or high-touch parcels (glass, electronics, cake) so carriers handle with extra care.</p>
+                  </div>
+                  <button type="button" onClick={() => setForm(f => ({...f, fragile: !f.fragile}))}
+                    className={"w-11 h-6 rounded-full transition-all relative shrink-0 ml-4 " + (form.fragile ? "bg-hitchOrange" : "bg-zinc-300")}>
+                    <div className={"absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all " + (form.fragile ? "left-5" : "left-0.5")} />
                   </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Weight (kg)</label>
-                <input type="number" step="0.5" min="0.5" max="10" value={form.weightKg}
-                  onChange={e => setForm({...form, weightKg: parseFloat(e.target.value)||0})}
-                  className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Declared Value (₹)</label>
-                <input type="number" value={form.declaredValue}
-                  onChange={e => setForm({...form, declaredValue: parseInt(e.target.value)||0})}
-                  className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[["Length","dimL"],["Width","dimW"],["Height","dimH"]].map(([l,k]) => (
-                <div key={k}>
-                  <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">{l} (cm)</label>
-                  <input type="number" value={form[k]} onChange={e => setForm({...form, [k]: parseInt(e.target.value)||0})}
-                    className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/50" />
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-              <div>
-                <p className="text-sm font-semibold text-zinc-900">Fragile Item</p>
-                <p className="text-xs text-zinc-500">Extra care handling required</p>
               </div>
-              <button type="button" onClick={() => setForm(f => ({...f, fragile: !f.fragile}))}
-                className={"w-11 h-6 rounded-full transition-all relative " + (form.fragile ? "bg-hitchOrange" : "bg-zinc-300")}>
-                <div className={"absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all " + (form.fragile ? "left-5" : "left-0.5")} />
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase text-zinc-400 mb-2">Package Photo (Bedrock AI will inspect)</label>
-              <div className="border-2 border-dashed border-zinc-200 rounded-xl p-8 text-center hover:border-hitchOrange transition-colors bg-zinc-50 cursor-pointer">
-                <Upload className="w-8 h-8 text-zinc-400 mx-auto mb-2" />
-                <p className="text-sm text-zinc-500">Drop image or click to upload (JPEG/PNG, max 5MB)</p>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* STEP 3 */}
-        {wizardStep === 3 && (
-          <div className="space-y-5 animate-fadeIn">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2"><Shield className="w-4 h-4 text-hitchOrange" /> Verification &amp; Security Seal</h2>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-amber-800">Physical Tamper Seal Required</p>
-                <p className="text-xs text-amber-700 mt-0.5">Record the serial number of a ₹10 banknote placed inside the package. The carrier will verify this code at pickup to confirm package integrity.</p>
+            {/* ─ STEP 2 ─ */}
+            {wizardStep === 2 && (
+              <div className="space-y-7 animate-fadeIn">
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 mb-1">Pickup and destination</h3>
+                  <p className="text-xs text-zinc-500 mb-4">Choose both cities from the search list so matching stays geographically accurate.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Pickup City</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">CITY</span>
+                        <input type="text" list="from-cities" value={form.fromCity}
+                          onChange={e => setForm({...form, fromCity: e.target.value})}
+                          className="w-full pl-16 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
+                          placeholder="Search origin city" />
+                        <datalist id="from-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">Search and select the exact city or route point.</p>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Destination City</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">CITY</span>
+                        <input type="text" list="to-cities" value={form.toCity}
+                          onChange={e => setForm({...form, toCity: e.target.value})}
+                          className="w-full pl-16 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
+                          placeholder="Search destination city" />
+                        <datalist id="to-cities">{CITIES.map(c => <option key={c} value={c} />)}</datalist>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">Select the delivery city from verified route suggestions.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 mb-1">Recipient details</h3>
+                  <p className="text-xs text-zinc-500 mb-4">These details support delivery coordination, OTP handoff, and support follow-up.</p>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Name</label>
+                      <input type="text" value={form.recipientName} onChange={e => setForm({...form, recipientName: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                      <p className="text-[10px] text-zinc-400 mt-1">Shown to the carrier during secure handoff.</p>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Phone</label>
+                      <input type="tel" value={form.recipientPhone} onChange={e => setForm({...form, recipientPhone: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                      <p className="text-[10px] text-zinc-400 mt-1">Used for pickup or delivery coordination.</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1.5">Recipient Address</label>
+                    <textarea rows={3} value={form.recipientAddress} onChange={e => setForm({...form, recipientAddress: e.target.value})}
+                      className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40 resize-none" />
+                    <p className="text-[10px] text-zinc-400 mt-1">Include building name, area, landmark, or gate instructions.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 mb-1">Preferred pickup window</h3>
+                  <p className="text-xs text-zinc-500 mb-4">Give carriers a realistic window so they can confirm availability with confidence.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] font-bold uppercase text-zinc-500">Earliest Pickup</label>
+                        <span className="text-[10px] text-zinc-400">LOCAL TIME</span>
+                      </div>
+                      <input type="datetime-local" value={form.pickupEarliest} onChange={e => setForm({...form, pickupEarliest: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                      <p className="text-[10px] text-zinc-400 mt-1">Use the first acceptable handoff time.</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] font-bold uppercase text-zinc-500">Latest Pickup</label>
+                        <span className="text-[10px] text-zinc-400">LOCAL TIME</span>
+                      </div>
+                      <input type="datetime-local" value={form.pickupLatest} onChange={e => setForm({...form, pickupLatest: e.target.value})}
+                        className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
+                      <p className="text-[10px] text-zinc-400 mt-1">Must be later than the earliest pickup time.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">₹10 Banknote Serial Number</label>
-              <input type="text" placeholder="e.g. 5AC 123456" value={form.banknoteSerial}
-                onChange={e => setForm({...form, banknoteSerial: e.target.value})}
-                className="w-full px-3 py-2.5 border border-zinc-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-hitchOrange/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase text-zinc-400 mb-2">Preferred Pickup Time Window</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[["morning","Morning 7–11AM"],["afternoon","Afternoon 12–4PM"],["evening","Evening 5–9PM"]].map(([v,l]) => (
-                  <button key={v} type="button" onClick={() => setForm(f => ({...f, pickupTime: v}))}
-                    className={"py-2.5 text-xs font-semibold rounded-xl border transition-all text-center " +
-                      (form.pickupTime === v ? "bg-hitchOrange text-white border-hitchOrange" : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100")}>
-                    {l}
+            )}
+
+            {/* ─ STEP 3 ─ */}
+            {wizardStep === 3 && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">Route</p>
+                    <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                      <Navigation2 className="w-5 h-5 text-zinc-400 shrink-0" />
+                    </div>
+                    <p className="text-lg font-bold text-zinc-900 leading-tight">{form.fromCity || "—"} → {form.toCity || "—"}</p>
+                    <p className="text-xs text-zinc-400 mt-1">Selected pickup and destination cities.</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">Live Carriers</p>
+                    <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                      <Truck className="w-5 h-5 text-zinc-400 shrink-0" />
+                    </div>
+                    <p className="text-lg font-bold text-zinc-900">{laneLoaded ? "3" : "0"}</p>
+                    <p className="text-xs text-zinc-400 mt-1">Verified carriers matching this lane right now.</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">Indicative Quote</p>
+                    <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                      <IndianRupee className="w-5 h-5 text-zinc-400 shrink-0" />
+                    </div>
+                    <p className="text-lg font-bold text-zinc-900">{laneLoaded && form.weightKg > 0 ? `₹${Math.round(form.weightKg * 85 + 17)}` : "Pending"}</p>
+                    <p className="text-xs text-zinc-400 mt-1">A live estimate based on current matching routes.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Lane intelligence */}
+                  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-hitchOrange" />
+                      <p className="text-sm font-bold text-zinc-900">Live lane intelligence</p>
+                    </div>
+                    <p className="text-xs text-zinc-500 mb-4">Carrier availability refreshes from the existing trip feed without changing your request payload.</p>
+                    {!laneLoaded ? (
+                      <div className="text-center py-6 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+                          <AlertCircle className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800">Unable to load live route intelligence</p>
+                        <p className="text-xs text-zinc-500">You can still submit the request. Retry if you want a fresher view of carrier supply first.</p>
+                        <button className="text-xs font-semibold px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-all">
+                          Retry lookup
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-emerald-800">Lane data loaded</p>
+                        <p className="text-xs text-emerald-600 mt-1">3 active carriers on this corridor</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Submission review */}
+                  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                    <p className="text-sm font-bold text-zinc-900 mb-1">Submission review</p>
+                    <p className="text-xs text-zinc-500 mb-4">A quick final check before the request goes live to matching carriers.</p>
+                    <div className="space-y-2">
+                      <div className="bg-zinc-50 rounded-xl border border-zinc-100 p-3 space-y-0.5">
+                        <p className="text-xs font-bold text-zinc-700">Parcel</p>
+                        <p className="text-xs text-zinc-600">{form.description || "—"} · {form.category?.toLowerCase()} · {form.weightKg} kg</p>
+                        {form.declaredValue && <p className="text-xs text-zinc-500">Declared value: Rs. {form.declaredValue}</p>}
+                        {form.fragile && <p className="text-xs text-zinc-500">Handling: Fragile handling requested</p>}
+                      </div>
+                      <div className="bg-zinc-50 rounded-xl border border-zinc-100 p-3 space-y-0.5">
+                        <p className="text-xs font-bold text-zinc-700">Recipient</p>
+                        <p className="text-xs text-zinc-600">{form.recipientName || "—"}</p>
+                        <p className="text-xs text-zinc-500">{form.recipientPhone || "—"}</p>
+                        <p className="text-xs text-zinc-500">{form.recipientAddress || "—"}</p>
+                      </div>
+                      {(form.pickupEarliest || form.pickupLatest) && (
+                        <div className="bg-zinc-50 rounded-xl border border-zinc-100 p-3 space-y-0.5">
+                          <p className="text-xs font-bold text-zinc-700">Pickup window</p>
+                          {form.pickupEarliest && <p className="text-xs text-zinc-500">Earliest: {form.pickupEarliest.replace("T", ", ")}</p>}
+                          {form.pickupLatest && <p className="text-xs text-zinc-500">Latest: {form.pickupLatest.replace("T", ", ")}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Nav buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+              {wizardStep > 1
+                ? <button onClick={() => setWizardStep(s => s - 1)} className="text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-all">Back</button>
+                : <button onClick={() => setScreen("home")} className="text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-all">← Home</button>
+              }
+              {wizardStep < 3
+                ? <button onClick={() => setWizardStep(s => s + 1)}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900 text-white font-semibold rounded-xl hover:bg-zinc-800 shadow-sm transition-all text-sm">
+                    Continue
                   </button>
-                ))}
-              </div>
-            </div>
-            {/* Summary */}
-            <div className="bg-zinc-50 rounded-xl border border-zinc-200 divide-y divide-zinc-100">
-              {[
-                ["Route", `${form.fromCity} → ${form.toCity}`],
-                ["Pickup Hub", form.fromHub],
-                ["Category", form.category],
-                ["Weight", `${form.weightKg} kg`],
-                ["Declared Value", `₹${form.declaredValue.toLocaleString()}`],
-                ["Fragile", form.fragile ? "Yes" : "No"],
-              ].map(([l,v]) => (
-                <div key={l} className="flex justify-between px-4 py-2.5 text-sm">
-                  <span className="text-zinc-500">{l}</span>
-                  <span className="font-semibold text-zinc-900">{v}</span>
-                </div>
-              ))}
-              <div className="flex justify-between px-4 py-3 bg-hitchOrange/5 rounded-b-xl">
-                <span className="text-sm font-bold text-zinc-900">Estimated Instant Price</span>
-                <span className="text-lg font-bold text-hitchOrange">₹{(form.weightKg * 85 + 17).toFixed(2)}</span>
-              </div>
+                : <button onClick={() => setScreen("payment")}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-md shadow-hitchOrange/20 transition-all text-sm">
+                    Submit Request <ArrowRight className="w-4 h-4" />
+                  </button>
+              }
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
-          {wizardStep > 1
-            ? <button onClick={() => setWizardStep(s => s - 1)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition-all">
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-            : <button onClick={() => setScreen("home")} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition-all">
-                <ArrowLeft className="w-4 h-4" /> Cancel
-              </button>
-          }
-          {wizardStep < 3
-            ? <button onClick={() => setWizardStep(s => s + 1)} className="flex items-center gap-2 px-6 py-2.5 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-sm transition-all text-sm">
-                Next <ArrowRight className="w-4 h-4" />
-              </button>
-            : <button onClick={() => setScreen("radar")} className="flex items-center gap-2 px-6 py-2.5 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-sm transition-all text-sm">
-                Find Carriers <Search className="w-4 h-4" />
-              </button>
-          }
+        {/* Sidebar */}
+        <div className="lg:col-span-4">
+          <div className="sticky top-24">
+            <RequestSnapshot step={wizardStep} form={form} />
+          </div>
         </div>
       </div>
     </div>
   );
 
-  // ─── RADAR ───────────────────────────────────────────────────────────────────
-  if (screen === "radar") return (
-    <div className="animate-fadeIn space-y-8">
-      <div className="flex items-center gap-3">
+  // ─── PAYMENT / SUCCESS ────────────────────────────────────────────────────
+  if (screen === "payment") return (
+    <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
+      <div className="flex items-center gap-3 mb-2">
         <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-all">
           <ArrowLeft className="w-4 h-4 text-zinc-500" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Route Radar</h1>
-          <p className="text-sm text-zinc-500">{form.fromCity} → {form.toCity} · {form.weightKg}kg · {form.category}</p>
+          <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Sender Workflow</p>
+          <h1 className="text-2xl font-bold text-zinc-900">Payment &amp; Confirmation</h1>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-zincBorder shadow-sm p-6">
-          <RadarDisplay from={form.fromCity} to={form.toCity} />
-        </div>
-
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-zinc-900">Matched Carriers</h3>
-            <span className="text-xs text-zinc-400">Sorted by rating</span>
+      {!payDone ? (
+        <div className="bg-white rounded-2xl border border-zincBorder shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-zinc-100">
+            <p className="text-xs font-bold uppercase text-zinc-400 tracking-wider mb-1">Secure Escrow Payment</p>
+            <p className="text-2xl font-bold text-zinc-900">₹{Math.round((form.weightKg || 2) * 85 + 17)}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">{form.fromCity || "Origin"} → {form.toCity || "Destination"} · {form.weightKg || 2}kg</p>
           </div>
-          {MOCK_CARRIERS.map(carrier => {
-            const ModeIcon = carrier.modeIcon;
-            const total = (carrier.carrierFee + carrier.platformFee).toFixed(2);
-            return (
-              <div key={carrier.id}
-                className={"bg-white rounded-2xl border shadow-sm p-5 hover:shadow-md transition-all cursor-pointer " +
-                  (selectedCarrier?.id === carrier.id ? "border-hitchOrange ring-2 ring-hitchOrange/20" : "border-zincBorder")}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-white font-bold text-sm">
-                        {carrier.name[0]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-zinc-900 text-sm">{carrier.name}</p>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                          <span className="text-xs font-semibold text-zinc-600">{carrier.rating}</span>
-                          <span className="text-xs text-zinc-400">· {carrier.trips} trips</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <div className="flex items-center gap-1 px-2 py-1 bg-zinc-100 rounded-lg border border-zinc-200">
-                        <ModeIcon className="w-3 h-3" />
-                        <span className="font-medium">{carrier.mode}</span>
-                      </div>
-                      <span className="font-medium">{carrier.depart}</span>
-                      <ArrowRight className="w-3 h-3 text-zinc-300" />
-                      <span className="font-medium">{carrier.arrive}</span>
-                      <span className="text-zinc-400">({carrier.duration})</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-zinc-500">
-                      <span>Carrier: <strong className="text-zinc-800">₹{carrier.carrierFee}</strong></span>
-                      <span>+</span>
-                      <span>Platform: <strong className="text-zinc-800">₹{carrier.platformFee}</strong></span>
-                      <span>=</span>
-                      <span className="font-bold text-hitchOrange text-sm">Total ₹{total}</span>
-                    </div>
-                  </div>
-                  <button onClick={() => { setSelectedCarrier(carrier); setScreen("payment"); }}
-                    className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-hitchOrange text-white font-semibold rounded-xl hover:bg-hitchOrange-hover shadow-sm transition-all text-xs">
-                    Accept &amp; Pay <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+          <div className="p-6 space-y-5">
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between"><span className="text-zinc-500">Carrier payout</span><span className="font-semibold">₹{Math.round((form.weightKg || 2) * 75)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">Platform fee (14.75%)</span><span className="font-semibold">₹{Math.round((form.weightKg || 2) * 11)}</span></div>
+              <div className="flex justify-between font-bold border-t border-zinc-100 pt-2">
+                <span>Escrow total</span><span className="text-hitchOrange">₹{Math.round((form.weightKg || 2) * 85 + 17)}</span>
               </div>
-            );
-          })}
+            </div>
+            <button onClick={() => setPayDone(true)}
+              className="w-full py-3.5 bg-hitchOrange text-white font-bold rounded-xl hover:bg-hitchOrange-hover shadow-lg shadow-hitchOrange/20 transition-all text-sm">
+              Pay &amp; Lock Escrow via Razorpay
+            </button>
+            <p className="text-center text-xs text-zinc-400">256-bit SSL · UPI · Cards · Net Banking</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-5 animate-fadeIn">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+            <h2 className="text-xl font-bold text-emerald-900">Request Published!</h2>
+            <p className="text-sm text-emerald-700">Matching carriers on your corridor have been notified.</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border-2 border-dashed border-zinc-200 p-7 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Hitch Shipment</p>
+                <p className="font-display text-3xl text-zinc-900 mt-0.5">HTX-{Math.floor(Math.random()*9000+1000)}</p>
+              </div>
+              <div className="w-16 h-16 bg-zinc-900 rounded-xl flex items-center justify-center">
+                <QrCode className="w-10 h-10 text-white" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              {[
+                ["From", form.fromCity || "Mumbai"], ["To", form.toCity || "Pune"],
+                ["Category", form.category], ["Weight", `${form.weightKg || 2} kg`],
+                ["Recipient", form.recipientName || "Aarav Sharma"], ["Fragile", form.fragile ? "Yes" : "No"],
+              ].map(([l, v]) => (
+                <div key={l}>
+                  <p className="text-zinc-400 uppercase font-bold text-[10px]">{l}</p>
+                  <p className="text-zinc-900 font-semibold mt-0.5">{v}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-hitchOrange/10 border border-hitchOrange/30 rounded-xl p-5 text-center">
+              <p className="text-[10px] font-bold uppercase text-hitchOrange tracking-widest mb-2">4-Digit Pickup OTP</p>
+              <p className="text-5xl font-bold text-zinc-900 tracking-widest font-mono">{pickupOtp}</p>
+              <p className="text-[10px] text-zinc-500 mt-2">Share only with your matched carrier at the pickup point.</p>
+            </div>
+
+            <button className="w-full flex items-center justify-center gap-2 py-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition-all">
+              <Download className="w-4 h-4" /> Download Shipment PDF
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-
-  // ─── PAYMENT ─────────────────────────────────────────────────────────────────
-  if (screen === "payment") {
-    const carrier = selectedCarrier || MOCK_CARRIERS[0];
-    const total = (carrier.carrierFee + carrier.platformFee).toFixed(2);
-    return (
-      <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <button onClick={() => setScreen("radar")} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-all">
-            <ArrowLeft className="w-4 h-4 text-zinc-500" />
-          </button>
-          <h1 className="text-2xl font-bold text-zinc-900">Payment &amp; Receipt</h1>
-        </div>
-
-        {!payDone ? (
-          <div className="bg-white rounded-2xl border border-zincBorder shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-zinc-900 to-zinc-800 px-6 py-5 text-white">
-              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1">Secure Checkout</p>
-              <p className="text-xl font-bold">₹{total} via Razorpay</p>
-              <p className="text-xs text-zinc-400 mt-1">{form.fromCity} → {form.toCity} · {form.weightKg}kg</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-3">
-                {[["Carrier Payout", `₹${carrier.carrierFee}.00`],["Platform Fee (14.75%)",`₹${carrier.platformFee}`]].map(([l,v]) => (
-                  <div key={l} className="flex justify-between text-sm">
-                    <span className="text-zinc-500">{l}</span>
-                    <span className="font-semibold text-zinc-900">{v}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-base font-bold border-t border-zinc-100 pt-3">
-                  <span>Total (Escrow)</span>
-                  <span className="text-hitchOrange">₹{total}</span>
-                </div>
-              </div>
-              <div className="bg-zinc-50 rounded-xl p-4 space-y-2 border border-zinc-200">
-                <p className="text-xs font-bold uppercase text-zinc-400">Carrier Details</p>
-                <p className="text-sm font-semibold text-zinc-900">{carrier.name}</p>
-                <p className="text-xs text-zinc-500 flex items-center gap-1"><Train className="w-3 h-3" /> {carrier.mode} · {carrier.depart}</p>
-              </div>
-              <button onClick={() => setPayDone(true)}
-                className="w-full py-3.5 bg-hitchOrange text-white font-bold rounded-xl hover:bg-hitchOrange-hover shadow-lg shadow-hitchOrange/25 transition-all flex items-center justify-center gap-2">
-                <Zap className="w-4 h-4" /> Pay ₹{total} — Lock Escrow
-              </button>
-              <p className="text-center text-xs text-zinc-400">256-bit SSL · UPI · Cards · Net Banking via Razorpay</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-5 animate-fadeIn">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h2 className="text-xl font-bold text-emerald-900">Payment Confirmed!</h2>
-              <p className="text-sm text-emerald-700">Escrow locked. Your carrier has been notified.</p>
-            </div>
-            {/* Shipment Document */}
-            <div className="bg-white rounded-2xl border-2 border-dashed border-zinc-200 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Hitch Shipment Document</p>
-                  <p className="font-display text-2xl text-zinc-900 mt-1">HTX-4821</p>
-                </div>
-                <div className="w-16 h-16 bg-zinc-900 rounded-xl flex items-center justify-center">
-                  <QrCode className="w-10 h-10 text-white" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                {[["From",`${form.fromCity} · ${form.fromHub}`],["To",`${form.toCity} · ${form.toHub}`],
-                  ["Category",form.category],["Weight",`${form.weightKg} kg`],
-                  ["Carrier",carrier.name],["Travel Mode",carrier.mode]].map(([l,v]) => (
-                  <div key={l}>
-                    <p className="text-zinc-400 uppercase font-bold">{l}</p>
-                    <p className="text-zinc-900 font-semibold mt-0.5">{v}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-hitchOrange/10 border border-hitchOrange/30 rounded-xl p-4 text-center">
-                <p className="text-xs font-bold uppercase text-hitchOrange tracking-wider mb-1">4-Digit Pickup OTP</p>
-                <p className="text-4xl font-bold text-zinc-900 tracking-widest font-mono">{pickupOtp}</p>
-                <p className="text-xs text-zinc-500 mt-1">Share this code with <strong>{carrier.name}</strong> at pickup. Do not share otherwise.</p>
-              </div>
-              <button className="w-full flex items-center justify-center gap-2 py-2.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition-all">
-                <Download className="w-4 h-4" /> Download Shipment PDF
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return null;
 }
