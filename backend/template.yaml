@@ -11,29 +11,8 @@ Globals:
     Environment:
       Variables:
         TABLE_NAME: !Ref HitchTable
-        INTAKE_BUCKET_NAME: !Ref HitchPackageVault
 
 Resources:
-  # ============================================================================
-  # S3 BUCKET FOR PACKAGE INTAKE VAULT
-  # ============================================================================
-  HitchPackageVault:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders:
-              - "*"
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - HEAD
-            AllowedOrigins:
-              - "*"
-            MaxAge: 3000
-
   # ============================================================================
   # DYNAMODB SINGLE-TABLE STORE
   # ============================================================================
@@ -67,13 +46,33 @@ Resources:
             ProjectionType: ALL
 
   # ============================================================================
+  # S3 BUCKET FOR PACKAGE INTAKE VAULT
+  # ============================================================================
+  HitchPackageVault:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3000
+
+  # ============================================================================
   # SQS NOTIFICATION QUEUE FOR WORKFLOW TASK TOKENS
   # ============================================================================
   CarrierNotificationQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: hitch-carrier-notification-queue
-      VisibilityTimeoutSeconds: 300
+      VisibilityTimeout: 300
 
   # ============================================================================
   # API GATEWAY (HTTP API)
@@ -103,9 +102,12 @@ Resources:
     Properties:
       CodeUri: lambdas/s3_presign/
       Handler: app.lambda_handler
+      Environment:
+        Variables:
+          INTAKE_BUCKET_NAME: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
       Policies:
         - S3CrudPolicy:
-            BucketName: !Ref HitchPackageVault
+            BucketName: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
       Events:
         PresignApi:
           Type: HttpApi
@@ -129,15 +131,13 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref HitchTable
         - S3ReadPolicy:
-            BucketName: !Ref HitchPackageVault
+            BucketName: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
         - Statement:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
-              Resource:
-                - "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
-                - "arn:aws:bedrock:*:*:inference-profile/*anthropic.claude-3-5-sonnet*"
+              Resource: "*"
       Events:
         S3ImageUploadEvent:
           Type: S3

@@ -1,0 +1,7 @@
+node_modules/
+.aws-sam/
+__pycache__/
+*.pyc
+dist/
+deploy.zip
+.DS_Store
