@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Hitch - Cloud-Native Peer-to-Peer Commuter Crowd-Shipping Platform Baseline SAM Template
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref HitchTable
+        INTAKE_BUCKET_NAME: !Ref HitchPackageVault
+
+Resources:
+  # ============================================================================
+  # S3 BUCKET FOR PACKAGE INTAKE VAULT
+  # ============================================================================
+  HitchPackageVault:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "hitch-package-vault-${AWS::AccountId}-${AWS::Region}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3000
+
+  # ============================================================================
+  # DYNAMODB SINGLE-TABLE STORE
+  # ============================================================================
+  HitchTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: HitchTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # ============================================================================
+  # API GATEWAY (HTTP API)
+  # ============================================================================
+  HitchApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: HitchApi
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - x-amz-meta-sender-id
+          - x-amz-meta-request-id
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+
+  # ============================================================================
+  # LAMBDA FUNCTIONS
+  # ============================================================================
+  S3PresignFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/s3_presign/
+      Handler: app.lambda_handler
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref HitchPackageVault
+      Events:
+        PresignApi:
+          Type: HttpApi
+          Properties:
+            Path: /intake/presign
+            Method: POST
+            ApiId: !Ref HitchApi
+
+Outputs:
+  HitchApiUrl:
+    Description: "HTTP API Gateway endpoint URL"
+    Value: !Sub "https://${HitchApi}.execute-api.${AWS::Region}.amazonaws.com"
+  PackageVaultBucketName:
+    Description: "S3 Package Vault Bucket Name"
+    Value: !Ref HitchPackageVault
+  DynamoDBTableName:
+    Description: "DynamoDB Single Table Name"
+    Value: !Ref HitchTable
