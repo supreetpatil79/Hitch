@@ -1,132 +1,187 @@
-# Hitch 🚀 | Cloud-Native Peer-to-Peer Intercity Logistics Grid
+# Hitch
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Amplify_Hosted-00C853?style=for-the-badge&logo=amazon-aws)](https://main.d22ejgaxykue38.amplifyapp.com)
-[![AWS SAM](https://img.shields.io/badge/AWS-SAM-orange?logo=amazon-aws)](https://aws.amazon.com/serverless/sam/)
-[![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-blue?logo=amazon-aws)](https://aws.amazon.com/bedrock/)
-[![AWS Step Functions](https://img.shields.io/badge/AWS-Step_Functions-purple?logo=amazon-aws)](https://aws.amazon.com/step-functions/)
-[![AWS Amplify](https://img.shields.io/badge/AWS-Amplify-FF9900?logo=aws-amplify)](https://aws.amazon.com/amplify/)
+[![Live](https://img.shields.io/badge/Live-Amplify_Hosted-00C853?logo=amazon-aws&logoColor=white)](https://main.d22ejgaxykue38.amplifyapp.com)
+[![AWS SAM](https://img.shields.io/badge/Infra-AWS_SAM-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/serverless/sam/)
+[![Bedrock](https://img.shields.io/badge/AI-Amazon_Bedrock-232F3E?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![React](https://img.shields.io/badge/Frontend-React_18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 
-> **"Rail · Road · Runway · Delivered."**  
-> **Live Production URL:** [https://main.d22ejgaxykue38.amplifyapp.com](https://main.d22ejgaxykue38.amplifyapp.com)
+> Rail · Road · Runway · Delivered.
 
-**Hitch** is an enterprise-grade, serverless peer-to-peer intercity logistics grid built on AWS for the **Bharat Builds on AWS** Hackathon. Hitch turns daily travelers across 173 Indian cities (on Vande Bharat trains, intercity buses, expressway carpools, and domestic flights) into verified courier carriers — enabling **same-day intercity delivery at 50–70% lower cost** than traditional legacy shippers.
+**Hitch** is a serverless peer-to-peer intercity logistics platform that converts verified daily travelers into last-mile courier carriers across Indian city corridors. Senders access same-day intercity delivery at significantly lower cost than traditional courier operators; carriers monetize spare luggage capacity on trips they are already taking.
 
----
-
-## 💰 Unit Economics & Commission Engine
-
-Hitch operates on an automated **38% / 62% Revenue Split Model**:
-* **Carrier Take-Home Payout (62%):** Instantly settled to the traveler's Amazon Pay / UPI wallet upon 4-digit Delivery OTP verification.
-* **Hitch Platform Take Rate (38%):** Covers AWS infrastructure, Bedrock AI visual inspection models, tamper-evident seals, payment gateway fees, and gross platform margin.
-
-### Transport Mode Per-Kg Slabs:
-* 🚆 **Train (Vande Bharat / Express):** `₹70 / kg` *(Min. floor ₹100)*
-* 🚌 **Bus (Intercity Volvo / Sleeper):** `₹60 / kg` *(Min. floor ₹80)*
-* 🚗 **Car (Expressway / Trunk):** `₹90 / kg` *(Min. floor ₹120)*
-* ✈️ **Flight (Domestic Airlines):** `₹150 / kg` *(Min. floor ₹250)*
-* 🛵 **Bike (Quick Courier):** `₹50 / kg` *(Min. floor ₹60)*
+**Production:** https://main.d22ejgaxykue38.amplifyapp.com
 
 ---
 
-## 🏗 System Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Frontend ["Client Dashboards (AWS Amplify Hosting)"]
-        UI["React 18 Dual-Portal Dashboard"]
-        SP["Sender Portal (#FF5C28)"]
-        CP["Carrier Portal (#2563EB)"]
-        UI --> SP
-        UI --> CP
+    subgraph Frontend ["Client Layer — AWS Amplify Hosting"]
+        UI["React 18 SPA"]
+        SP["Sender Portal"]
+        CP["Carrier Portal"]
+        EP["Earnings Portal"]
+        AP["Admin Portal"]
+        UI --> SP & CP & EP & AP
     end
 
-    subgraph Ingestion ["S3 Package Intake Vault"]
-        API["Amazon API Gateway (HTTP API)"]
-        PresignLambda["S3 Presign Lambda (Python 3.12)"]
-        S3Bucket["S3 Intake Bucket: hitch-package-vault"]
-        
-        UI -->|1. Request Presigned URL| API
-        API --> PresignLambda
-        PresignLambda -->|2. Return S3 Presigned POST| UI
-        UI -->|3. Direct Binary Upload| S3Bucket
+    subgraph Ingestion ["Package Intake — Amazon S3"]
+        APIGW["Amazon API Gateway (HTTP API)"]
+        PresignFn["Presign Lambda (Python 3.12)"]
+        S3["S3 Bucket — hitch-package-vault"]
+        UI -->|"1. Request presigned URL"| APIGW
+        APIGW --> PresignFn
+        PresignFn -->|"2. Return presigned POST"| UI
+        UI -->|"3. Direct binary upload"| S3
     end
 
-    subgraph AI_Inspection ["Amazon Bedrock AI Safety Pipeline"]
-        BedrockLambda["Bedrock Inspector Lambda"]
-        Claude35["Amazon Bedrock (Claude 3.5 Sonnet)"]
-        
-        S3Bucket -->|4. ObjectCreated Trigger| BedrockLambda
-        BedrockLambda -->|5. Base64 Multimodal Prompt| Claude35
-        Claude35 -->|6. JSON Safety Audit & Score| BedrockLambda
+    subgraph Inspection ["Safety Pipeline — Amazon Bedrock"]
+        InspectFn["Bedrock Inspector Lambda"]
+        Claude["Claude 3.5 Sonnet"]
+        S3 -->|"4. ObjectCreated trigger"| InspectFn
+        InspectFn -->|"5. Multimodal prompt"| Claude
+        Claude -->|"6. Safety score + category"| InspectFn
     end
 
-    subgraph Orchestration ["Delivery Orchestration & State Machine"]
-        SFN["AWS Step Functions (DeliveryLifecycleStateMachine)"]
-        HandshakeLambda["Handshake Service Lambda"]
-        DDB[("DynamoDB Single Table: HitchTable")]
-        
-        BedrockLambda -->|7. Save Verified Item| DDB
-        SFN -->|8. Hold Escrow & Manage Lifecycle| DDB
-        UI -->|9. Submit Pickup/Delivery OTP| HandshakeLambda
-        HandshakeLambda -->|10. Send Task Token Callback| SFN
-        SFN -->|11. Release Payout| DDB
+    subgraph Lifecycle ["Delivery Orchestration — AWS Step Functions"]
+        SFN["DeliveryLifecycleMachine"]
+        HandshakeFn["OTP Handshake Lambda"]
+        DDB[("DynamoDB — HitchTable")]
+        InspectFn -->|"7. Persist verified item"| DDB
+        SFN -->|"8. Hold escrow"| DDB
+        UI -->|"9. Submit OTP"| HandshakeFn
+        HandshakeFn -->|"10. Task token callback"| SFN
+        SFN -->|"11. Release payout"| DDB
     end
 ```
 
 ---
 
-## ☁️ AWS Services Utilization Matrix
+## AWS Services
 
-| AWS Service | Role in Hitch Architecture |
+| Service | Role |
 | :--- | :--- |
-| **Amazon Bedrock** | Multimodal safety inspection using Claude 3.5 Sonnet to detect prohibited items, compute packaging integrity scores, and categorize volume tiers. |
-| **AWS Step Functions** | State machine orchestrating the end-to-end delivery lifecycle (Escrow -> Carrier Callback -> Pickup OTP Handshake -> In-Transit -> Delivery OTP -> Payout Release). |
-| **Amazon S3** | `hitch-package-vault` bucket storing raw parcel intake photos with presigned POST uploads and event triggers. |
-| **AWS Lambda** | Python 3.12 serverless compute for S3 presigned URL generation, Bedrock AI inspection, and OTP handshake callbacks. |
-| **Amazon DynamoDB** | Single-table (`HitchTable`) storing package metadata, commuter trip corridors, matches, and dual OTP handshake tokens. |
-| **Amazon API Gateway** | CORS-enabled HTTP API routing intake and handshake requests with least-privilege security. |
-| **AWS Amplify Hosting** | CI/CD automated deployment of the React dual-portal dashboard. |
+| **Amazon Bedrock** | Multimodal package safety inspection via Claude 3.5 Sonnet. Detects prohibited items, scores packaging integrity, and classifies volume tier. |
+| **AWS Step Functions** | State machine governing the full delivery lifecycle: escrow hold → carrier match → pickup OTP → in-transit → delivery OTP → payout release. |
+| **Amazon S3** | `hitch-package-vault` bucket receives raw parcel intake photos via short-lived presigned POST URLs (15-minute TTL, 5 MB content-length enforcement). |
+| **AWS Lambda** | Python 3.12 functions for presigned URL generation, Bedrock inspection pipeline, and OTP handshake task-token callbacks. |
+| **Amazon DynamoDB** | Single-table design (`HitchTable`) storing package records, carrier trip corridors, match assignments, and dual OTP tokens. |
+| **Amazon API Gateway** | CORS-enabled HTTP API routing client requests to Lambda with least-privilege IAM execution roles. |
+| **AWS Amplify Hosting** | CI/CD pipeline with automatic branch deployments on every push to `main`. |
 
 ---
 
-## 🛠 Local Development Setup
+## Pricing Model
 
-### 1. Prerequisites
-- Node.js 18+ & npm
+Hitch applies a fixed **38 / 62 revenue split** on every transaction.
+
+| Party | Share | Settlement |
+| :--- | :--- | :--- |
+| Carrier (traveler) | 62% | Instant payout to Amazon Pay / UPI wallet on delivery OTP verification |
+| Hitch platform | 38% | Covers infrastructure, payment gateway, tamper-seal operations, and gross margin |
+
+### Per-Kilogram Rate Schedule
+
+| Transport Mode | Rate | Minimum Floor |
+| :--- | :---: | :---: |
+| Train (Vande Bharat / Express) | ₹70 / kg | ₹100 |
+| Bus (Intercity Volvo / Sleeper) | ₹60 / kg | ₹80 |
+| Car (Expressway / Trunk road) | ₹90 / kg | ₹120 |
+| Flight (Domestic) | ₹150 / kg | ₹250 |
+| Bike (Intra-city quick courier) | ₹50 / kg | ₹60 |
+
+**Pricing formula:**
+
+```
+rate_per_kg    = TRANSPORT_RATES[mode]
+base_price     = max(weight_kg × rate_per_kg, floor_price)
+carrier_payout = base_price × 0.62
+platform_fee   = base_price × 0.38
+```
+
+---
+
+## Repository Structure
+
+```
+hitch/
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                           # Root component; portal routing, shared state
+│   │   ├── components/
+│   │   │   ├── SenderPortal.jsx              # Sender booking wizard + payment flow
+│   │   │   ├── CarrierPortal.jsx             # Carrier trip registration + payout preview
+│   │   │   ├── EarningsPortal.jsx            # Carrier wallet, ledger, withdrawal
+│   │   │   ├── AdminPortal.jsx               # Ops dashboard; OTP state feed
+│   │   │   ├── RoutePreviewIllustration.jsx  # Animated SVG route visualizations
+│   │   │   └── PersonCarrierIcon.jsx         # Custom SVG brand icon
+│   │   └── utils/
+│   │       └── pricing.js                    # calculatePricing() — transport rate engine
+│   ├── tailwind.config.js
+│   └── vite.config.js
+└── backend/
+    ├── template.yaml                         # AWS SAM infrastructure definition
+    ├── functions/
+    │   ├── presign/                          # S3 presigned URL generator
+    │   ├── bedrock_inspector/                # Package safety pipeline
+    │   └── handshake/                        # OTP task-token callback
+    └── core/
+        └── matcher.py                        # Corridor-to-trip matching engine
+```
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+
 - Python 3.12
-- AWS SAM CLI & Docker (for local Lambda testing)
+- AWS SAM CLI
+- Docker (for local Lambda invocation)
 
-### 2. Run Frontend Dashboard Locally
+### Run frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
+# Open http://localhost:3000
 ```
-Open `http://localhost:3000` to access the Sender, Carrier, and Live Delivery Tracker portals.
 
-### 3. Verify Core Domain Matching Engine
+### Run matcher unit tests
+
 ```bash
 python3 backend/core/matcher.py
 ```
 
 ---
 
-## 🚀 AWS SAM Deployment Instructions
+## Deployment
 
-To build and deploy the entire serverless infrastructure stack on AWS:
+The React frontend deploys automatically to AWS Amplify on every push to `main`. To deploy or update the serverless backend stack:
 
 ```bash
-# 1. Build SAM Application
+# Build Lambda functions and resolve dependencies
 sam build --template backend/template.yaml
 
-# 2. Deploy to AWS Account
+# Interactive guided deploy (first run)
 sam deploy --guided \
-  --stack-name hitch-aws \
+  --stack-name hitch-prod \
+  --region ap-south-1
+
+# Subsequent deploys
+sam deploy --template backend/template.yaml \
+  --stack-name hitch-prod \
   --region ap-south-1
 ```
 
 ---
 
-## 🛡 Security & Compliance
-- **Direct S3 Intake**: Secure direct client-to-S3 uploads enforced via 15-minute expiring presigned POST URLs and content-length limits (max 5MB).
-- **Intermediary Safe Harbor**: Operations comply with Section 79 of the Information Technology Act 2000 as a technology platform intermediary.
+## Security
+
+- **Presigned upload enforcement:** All package photo uploads flow client-direct to S3 using presigned POST URLs with a 15-minute TTL and a 5 MB `content-length-range` condition. No package binary data transits the application servers.
+- **Least-privilege IAM:** Each Lambda function is scoped to the minimum IAM actions required for its operation. No shared execution roles across functions.
+- **Escrow isolation:** Payout release is gated exclusively through the Step Functions state machine task-token mechanism, preventing out-of-band settlement.
+- **Intermediary safe harbor:** Platform operations comply with Section 79 of the Information Technology Act 2000 as a technology intermediary.
