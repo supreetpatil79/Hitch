@@ -179,22 +179,22 @@ export default function App() {
             </div>
           </div>
 
-          {/* Portal Switcher */}
-          <nav className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200 gap-0.5">
+          {/* Desktop Portal Switcher */}
+          <nav className="hidden md:flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200 gap-0.5">
             {PORTALS.map(({ id, label, icon: Icon, accent }) => (
               <button key={id} onClick={() => setPortal(id)}
                 className={"flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all " +
                   (portal === id ? accent + " shadow-sm" : "text-zinc-500 hover:text-zinc-900 hover:bg-white/60")}>
                 <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{label}</span>
+                <span>{label}</span>
               </button>
             ))}
           </nav>
 
           {/* Right: Carrier Wallet Balance Indicator */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => setPortal("earnings")}
-              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 transition-all shadow-xs">
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 transition-all shadow-xs">
               <Wallet className="w-3.5 h-3.5 text-emerald-600" />
               <span>₹{carrierWallet.availableBalance.toLocaleString()}</span>
             </button>
@@ -207,7 +207,7 @@ export default function App() {
       </header>
 
       {/* Portal Content with Shared Real-Time State */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 md:pb-8">
         {portal === "sender"  && (
           <SenderPortal
             shipments={shipments}
@@ -239,8 +239,29 @@ export default function App() {
         )}
       </main>
 
+      {/* Mobile Native-Style Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-zinc-200 py-2 px-3 flex items-center justify-around shadow-2xl safe-area-inset-bottom">
+        {PORTALS.map(({ id, label, icon: Icon, accent }) => {
+          const isActive = portal === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setPortal(id)}
+              className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all relative">
+              <div className={"w-8 h-8 rounded-xl flex items-center justify-center transition-all " +
+                (isActive ? accent + " shadow-sm scale-105" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200")}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <span className={"text-[10px] tracking-tight " + (isActive ? "font-bold text-zinc-900" : "font-medium text-zinc-400")}>
+                {id === "sender" ? "Sender" : id === "carrier" ? "Carrier" : id === "earnings" ? "Wallet" : "Admin"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Footer */}
-      <footer className="bg-white border-t border-zincBorder py-5">
+      <footer className="bg-white border-t border-zincBorder py-5 mb-16 md:mb-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <span>Hitch Technology Platform · Section 79 IT Act 2000 · 173 Cities · Peer-to-Peer Intercity Logistics</span>
           <div className="flex items-center gap-2 flex-wrap justify-center">
