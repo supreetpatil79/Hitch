@@ -1,11 +1,30 @@
-# Hitch 🚀 | Cloud-Native Peer-to-Peer Commuter Crowd-Shipping
+# Hitch 🚀 | Cloud-Native Peer-to-Peer Intercity Logistics Grid
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Amplify_Hosted-00C853?style=for-the-badge&logo=amazon-aws)](https://main.d22ejgaxykue38.amplifyapp.com)
 [![AWS SAM](https://img.shields.io/badge/AWS-SAM-orange?logo=amazon-aws)](https://aws.amazon.com/serverless/sam/)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-blue?logo=amazon-aws)](https://aws.amazon.com/bedrock/)
 [![AWS Step Functions](https://img.shields.io/badge/AWS-Step_Functions-purple?logo=amazon-aws)](https://aws.amazon.com/step-functions/)
 [![AWS Amplify](https://img.shields.io/badge/AWS-Amplify-FF9900?logo=aws-amplify)](https://aws.amazon.com/amplify/)
 
-**Hitch** is a cloud-native peer-to-peer commuter crowd-shipping platform built for the **Bharat Builds Tour** hackathon (targeting the *Ship It* grand prize and *Best UI* award). Hitch turns intercity travelers (trains, buses, cars) into courier carriers, enabling same-day parcel delivery with AI safety verification and escrow protection.
+> **"Rail · Road · Runway · Delivered."**  
+> **Live Production URL:** [https://main.d22ejgaxykue38.amplifyapp.com](https://main.d22ejgaxykue38.amplifyapp.com)
+
+**Hitch** is an enterprise-grade, serverless peer-to-peer intercity logistics grid built on AWS for the **Bharat Builds on AWS** Hackathon. Hitch turns daily travelers across 173 Indian cities (on Vande Bharat trains, intercity buses, expressway carpools, and domestic flights) into verified courier carriers — enabling **same-day intercity delivery at 50–70% lower cost** than traditional legacy shippers.
+
+---
+
+## 💰 Unit Economics & Commission Engine
+
+Hitch operates on an automated **38% / 62% Revenue Split Model**:
+* **Carrier Take-Home Payout (62%):** Instantly settled to the traveler's Amazon Pay / UPI wallet upon 4-digit Delivery OTP verification.
+* **Hitch Platform Take Rate (38%):** Covers AWS infrastructure, Bedrock AI visual inspection models, tamper-evident seals, payment gateway fees, and gross platform margin.
+
+### Transport Mode Per-Kg Slabs:
+* 🚆 **Train (Vande Bharat / Express):** `₹70 / kg` *(Min. floor ₹100)*
+* 🚌 **Bus (Intercity Volvo / Sleeper):** `₹60 / kg` *(Min. floor ₹80)*
+* 🚗 **Car (Expressway / Trunk):** `₹90 / kg` *(Min. floor ₹120)*
+* ✈️ **Flight (Domestic Airlines):** `₹150 / kg` *(Min. floor ₹250)*
+* 🛵 **Bike (Quick Courier):** `₹50 / kg` *(Min. floor ₹60)*
 
 ---
 
