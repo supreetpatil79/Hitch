@@ -62,16 +62,6 @@ function TripSnapshotSidebar({ step, trip }) {
 
   return (
     <div className="space-y-4">
-      {trip.fromCity && trip.toCity && (
-        <div className="animate-fadeIn">
-          <RoutePreviewIllustration
-            mode={trip.mode || "train"}
-            origin={trip.fromCity}
-            destination={trip.toCity}
-            transportName={trip.transportName}
-          />
-        </div>
-      )}
       <div className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Trip snapshot</h3>
