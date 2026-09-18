@@ -7,6 +7,7 @@ import {
   Sliders, FileText, ChevronRight, CheckCircle, Info, Landmark
 } from "lucide-react";
 import RoutePreviewIllustration from "./RoutePreviewIllustration";
+import { calculatePricing, TRANSPORT_RATES, HITCH_COMMISSION_PERCENT, CARRIER_PAYOUT_PERCENT } from "../utils/pricing";
 
 const CITIES = [
   "Bengaluru", "Mumbai", "Hyderabad", "Delhi", "Pune", "Chennai",
@@ -58,7 +59,7 @@ const CATEGORIES = ["Documents", "Clothing", "Electronics", "Food", "Medicine", 
 // Carrier Trip Snapshot Sidebar
 function TripSnapshotSidebar({ step, trip }) {
   const isComplete = trip.fromCity && trip.toCity && trip.departureDate && trip.capacityKg > 0;
-  const projectedPayout = Math.round(trip.capacityKg * trip.pricePerKg);
+  const pricing = calculatePricing(trip.capacityKg, trip.mode || "train");
 
   return (
     <div className="space-y-4">
@@ -75,7 +76,7 @@ function TripSnapshotSidebar({ step, trip }) {
           { icon: Navigation, label: "Lane", value: trip.fromCity && trip.toCity ? `${trip.fromCity} → ${trip.toCity}` : "Route pending", done: !!(trip.fromCity && trip.toCity) },
           { icon: Clock, label: "Schedule", value: trip.departureDate ? `${trip.departureDate.replace("T", " ")}` : "Add departure timing", done: !!trip.departureDate },
           { icon: Package, label: "Capacity", value: `${trip.capacityKg} kg · ${trip.acceptedCats.length} category rules`, done: trip.capacityKg > 0 },
-          { icon: IndianRupee, label: "Payout outlook", value: `₹${projectedPayout}.00 sample payout`, done: projectedPayout > 0 },
+          { icon: IndianRupee, label: "Your Payout (62%)", value: `₹${pricing.carrierPayout}.00 net payout`, done: trip.capacityKg > 0 },
         ].map(item => {
           const Icon = item.icon;
           return (
@@ -531,54 +532,72 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
               {/* STEP 3: PRICING */}
               {wizardStep === 3 && (
                 <div className="space-y-6 animate-fadeIn">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-5 bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs font-bold text-zinc-900">Capacity you can carry</label>
-                          <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-hitchBlue rounded-md">{trip.capacityKg} kg</span>
-                        </div>
-                        <input type="range" min="1" max="25" step="1" value={trip.capacityKg}
-                          onChange={e => setTrip({...trip, capacityKg: parseInt(e.target.value)})}
-                          className="w-full accent-hitchBlue" />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs font-bold text-zinc-900">Rate per kilogram</label>
-                          <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-hitchBlue rounded-md">Rs. {trip.pricePerKg}/kg</span>
-                        </div>
-                        <input type="range" min="30" max="300" step="5" value={trip.pricePerKg}
-                          onChange={e => setTrip({...trip, pricePerKg: parseInt(e.target.value)})}
-                          className="w-full accent-hitchBlue" />
-                      </div>
-                    </div>
+                  {(() => {
+                    const pricing = calculatePricing(trip.capacityKg, trip.mode || "train");
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-5 bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs">
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-xs font-bold text-zinc-900">Capacity you can carry</label>
+                                <span className="text-xs font-bold px-2.5 py-0.5 bg-blue-50 text-hitchBlue rounded-md">{trip.capacityKg} kg</span>
+                              </div>
+                              <input type="range" min="1" max="25" step="1" value={trip.capacityKg}
+                                onChange={e => setTrip({...trip, capacityKg: parseInt(e.target.value)})}
+                                className="w-full accent-hitchBlue" />
+                            </div>
 
-                    <div className="space-y-3">
-                      <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Projected Payout</p>
-                        <p className="text-2xl font-bold text-zinc-900 mt-1">₹{(trip.capacityKg * trip.pricePerKg).toFixed(2)}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">Based on {trip.capacityKg} kg at lane rate.</p>
-                      </div>
-                      <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Max Lane Value</p>
-                        <p className="text-2xl font-bold text-zinc-900 mt-1">₹{(trip.capacityKg * trip.pricePerKg).toFixed(2)}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">If full capacity gets matched.</p>
-                      </div>
-                    </div>
-                  </div>
+                            <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200/60 space-y-1.5 text-xs">
+                              <div className="flex justify-between text-zinc-600">
+                                <span>Transport Mode:</span>
+                                <span className="font-bold text-zinc-900">{TRANSPORT_RATES[trip.mode || "train"]?.label}</span>
+                              </div>
+                              <div className="flex justify-between text-zinc-600">
+                                <span>Standard Per-Kg Rate:</span>
+                                <span className="font-bold text-hitchBlue">₹{pricing.ratePerKg}/kg</span>
+                              </div>
+                              <div className="flex justify-between text-zinc-600 border-t border-zinc-200/60 pt-1 text-[11px]">
+                                <span>Minimum Floor Fare:</span>
+                                <span className="font-mono text-zinc-500">₹{pricing.minFloor}</span>
+                              </div>
+                            </div>
+                          </div>
 
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-900 mb-2">Package categories</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {CATEGORIES.map(cat => (
-                        <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                          className={"px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all " +
-                            (trip.acceptedCats.includes(cat) ? "bg-blue-50 text-hitchBlue border-blue-200 font-bold" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50")}>
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                          <div className="space-y-3">
+                            <div className="bg-linear-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-200 rounded-2xl p-4 shadow-xs">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Your Take-Home Payout (62%)</p>
+                              <p className="text-3xl font-bold text-emerald-700 mt-1">₹{pricing.carrierPayout}</p>
+                              <p className="text-[10px] text-emerald-800 mt-0.5">Credited to Amazon Pay Wallet upon Delivery OTP.</p>
+                            </div>
+                            <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-zinc-500">Hitch Platform Fee (38%)</span>
+                                <span className="font-bold text-zinc-700">₹{pricing.hitchCommission}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs border-t border-zinc-100 pt-2">
+                                <span className="font-bold text-zinc-900">Total Gross Booking</span>
+                                <span className="font-bold text-zinc-900 text-sm">₹{pricing.totalSenderPrice}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-bold text-zinc-900 mb-2">Package categories you accept</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {CATEGORIES.map(cat => (
+                              <button key={cat} type="button" onClick={() => toggleCategory(cat)}
+                                className={"px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all " +
+                                  (trip.acceptedCats.includes(cat) ? "bg-blue-50 text-hitchBlue border-blue-200 font-bold" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50")}>
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 

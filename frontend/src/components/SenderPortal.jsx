@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import RoutePreviewIllustration from "./RoutePreviewIllustration";
 import PersonCarrierIcon from "./PersonCarrierIcon";
+import { calculatePricing, TRANSPORT_RATES, HITCH_COMMISSION_PERCENT, CARRIER_PAYOUT_PERCENT } from "../utils/pricing";
 
 const MATCHED_CARRIERS = [
   {
@@ -695,6 +696,8 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
     setCreatedTrackingId(newId);
     setPayDone(true);
 
+    const pricing = calculatePricing(form.weightKg, selectedCarrier?.mode || "train");
+
     if (onAddShipment) {
       onAddShipment({
         id: newId,
@@ -703,7 +706,9 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
         category: form.category || "Electronics",
         weight: form.weightKg || 2.0,
         declaredValue: form.declaredValue || "12000",
-        payout: Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85)),
+        payout: pricing.carrierPayout,
+        grossPrice: pricing.totalSenderPrice,
+        hitchCommission: pricing.hitchCommission,
         status: "MATCHED",
         pickupOtp: "4829",
         deliveryOtp: "7104",
@@ -1115,7 +1120,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                     {MATCHED_CARRIERS.map(c => {
                       const isSelected = selectedCarrier?.id === c.id;
                       const Icon = c.mode === "train" ? Train : c.mode === "flight" ? Plane : Bus;
-                      const estCost = Math.round((form.weightKg || 2) * c.payoutRate + 17);
+                      const pricing = calculatePricing(form.weightKg, c.mode);
                       return (
                         <div
                           key={c.id}
@@ -1149,9 +1154,10 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                               <Clock className="w-3 h-3 text-zinc-400" /> {c.departure}
                             </div>
                             <div className="flex items-center justify-between pt-1">
-                              <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">{c.speed}</span>
-                              <span className="text-xs font-bold text-hitchOrange">₹{estCost}</span>
+                              <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">₹{pricing.ratePerKg}/kg</span>
+                              <span className="text-xs font-bold text-hitchOrange">₹{pricing.totalSenderPrice}</span>
                             </div>
+                            <p className="text-[9px] text-zinc-400">Carrier gets ₹{pricing.carrierPayout} (62%)</p>
                           </div>
                         </div>
                       );
@@ -1208,49 +1214,68 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   );
 
   // ─── PAYMENT ─────────────────────────────────────────────────────────────
-  if (screen === "payment") return (
-    <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
-      <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
-      <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85) + 17)} onPaymentSuccess={handleDummyPayment} />
+  if (screen === "payment") {
+    const currentPricing = calculatePricing(form.weightKg, selectedCarrier?.mode || "train");
 
-      <div className="flex items-center gap-3">
-        <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50">
-          <ArrowLeft className="w-4 h-4 text-zinc-500" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Payment &amp; Confirmation</h1>
-        </div>
-      </div>
+    return (
+      <div className="max-w-lg mx-auto animate-fadeIn space-y-6">
+        <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
+        <AmazonPaySandboxModal isOpen={isAmazonPayModalOpen} onClose={() => setIsAmazonPayModalOpen(false)} amount={currentPricing.totalSenderPrice} onPaymentSuccess={handleDummyPayment} />
 
-      {!payDone ? (
-        <div className="bg-white rounded-3xl border border-zincBorder shadow-sm p-6 space-y-5">
-          <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
-            <div>
-              <p className="text-xs font-bold uppercase text-zinc-400">Escrow Total</p>
-              <p className="text-3xl font-bold text-zinc-900">₹{Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85) + 17)}</p>
-            </div>
-            <span className="text-xs font-bold bg-orange-50 text-hitchOrange px-3 py-1 rounded-full border border-orange-200">
-              {form.fromCity} → {form.toCity}
-            </span>
-          </div>
-
-          <div className="space-y-2.5 text-xs">
-            <div className="flex justify-between text-zinc-500">
-              <span>Carrier Payout ({selectedCarrier?.carrierName || "Rahul Verma"})</span>
-              <span className="font-bold text-zinc-800">₹{Math.round((form.weightKg || 2) * (selectedCarrier?.payoutRate || 85))}</span>
-            </div>
-            <div className="flex justify-between text-zinc-500">
-              <span>Platform Escrow &amp; Insurance Fee</span>
-              <span className="font-bold text-zinc-800">₹17</span>
-            </div>
-          </div>
-
-          <button onClick={() => setIsAmazonPayModalOpen(true)}
-            className="w-full py-3.5 bg-[#FF9900] hover:bg-[#E68A00] text-zinc-950 font-bold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-xs font-bold">a</span>
-            <span>Pay &amp; Lock Escrow via Amazon Pay Sandbox</span>
+        <div className="flex items-center gap-3">
+          <button onClick={() => { setScreen("create"); setWizardStep(3); }} className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-50">
+            <ArrowLeft className="w-4 h-4 text-zinc-500" />
           </button>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900">Payment &amp; Confirmation</h1>
+          </div>
         </div>
+
+        {!payDone ? (
+          <div className="bg-white rounded-3xl border border-zincBorder shadow-sm p-6 space-y-5">
+            <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
+              <div>
+                <p className="text-xs font-bold uppercase text-zinc-400">Escrow Total</p>
+                <p className="text-3xl font-bold text-zinc-900">₹{currentPricing.totalSenderPrice}</p>
+              </div>
+              <span className="text-xs font-bold bg-orange-50 text-hitchOrange px-3 py-1 rounded-full border border-orange-200">
+                {form.fromCity} → {form.toCity}
+              </span>
+            </div>
+
+            {/* Savings Badge vs Traditional Courier */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-emerald-900">Save ₹{currentPricing.savingsRupees} ({currentPricing.savingsPercent}%)</span>
+              </div>
+              <span className="text-zinc-500 line-through text-[11px]">Courier: ₹{currentPricing.traditionalCourierPrice}</span>
+            </div>
+
+            {/* 38% / 62% Revenue Split Breakdown */}
+            <div className="space-y-2.5 text-xs bg-zinc-50/70 rounded-2xl p-4 border border-zinc-100">
+              <div className="flex justify-between text-zinc-600">
+                <span className="flex items-center gap-1.5">
+                  <PersonCarrierIcon className="w-3.5 h-3.5 text-hitchBlue" /> Carrier Payout (62% to {selectedCarrier?.carrierName || "Rahul Verma"})
+                </span>
+                <span className="font-bold text-zinc-900">₹{currentPricing.carrierPayout}</span>
+              </div>
+              <div className="flex justify-between text-zinc-600">
+                <span>🏛️ Hitch Platform Fee (38% — AWS Escrow &amp; AI)</span>
+                <span className="font-bold text-zinc-900">₹{currentPricing.hitchCommission}</span>
+              </div>
+              <div className="border-t border-zinc-200/60 pt-2 flex justify-between text-[11px] text-zinc-400">
+                <span>Pricing Mode Slab: {TRANSPORT_RATES[selectedCarrier?.mode || "train"]?.label}</span>
+                <span>₹{currentPricing.ratePerKg}/kg</span>
+              </div>
+            </div>
+
+            <button onClick={() => setIsAmazonPayModalOpen(true)}
+              className="w-full py-3.5 bg-[#FF9900] hover:bg-[#E68A00] text-zinc-950 font-bold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-xs font-bold">a</span>
+              <span>Pay ₹{currentPricing.totalSenderPrice} via Amazon Pay Sandbox</span>
+            </button>
+          </div>
       ) : (
         <div className="space-y-5 animate-fadeIn">
           <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-center space-y-2">
@@ -1291,6 +1316,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
       )}
     </div>
   );
+}
 
-  return null;
+return null;
 }

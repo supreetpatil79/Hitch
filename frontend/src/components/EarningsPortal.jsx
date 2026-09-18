@@ -185,14 +185,19 @@ export default function EarningsPortal({ carrierWallet, onWithdraw, onSelectPort
 
         {/* Right: Live Transaction Ledger */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+          <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-zinc-900 text-base">Real-Time Payout &amp; Escrow Ledger</h3>
               <p className="text-xs text-zinc-500 mt-0.5">Live transactional records synced with delivery state machines</p>
             </div>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live Sync
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                62% Take-Home · 38% Hitch Fee
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live Sync
+              </span>
+            </div>
           </div>
 
           <div className="divide-y divide-zinc-100">
