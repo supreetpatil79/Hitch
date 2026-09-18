@@ -164,15 +164,7 @@ export default function App() {
               H
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-2xl tracking-tight text-zinc-900 leading-none">Hitch</span>
-                <span className="hidden sm:block text-xs font-bold px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full border border-zinc-200">
-                  Bharat Builds on AWS
-                </span>
-                <span className="hidden md:flex items-center gap-1 text-xs font-bold px-2 py-0.5 bg-hitchOrange/10 text-hitchOrange rounded-full border border-hitchOrange/20">
-                  <Globe className="w-3 h-3" /> 173 Cities
-                </span>
-              </div>
+              <span className="font-display text-2xl tracking-tight text-zinc-900 leading-none">Hitch</span>
               <p className="text-[10px] font-semibold tracking-wide text-zinc-500 mt-0.5">
                 Rail · Road · Runway · Delivered.
               </p>
