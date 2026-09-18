@@ -4,12 +4,13 @@ import SenderPortal from "./components/SenderPortal";
 import CarrierPortal from "./components/CarrierPortal";
 import EarningsPortal from "./components/EarningsPortal";
 import AdminPortal from "./components/AdminPortal";
+import PersonCarrierIcon from "./components/PersonCarrierIcon";
 
 const PORTALS = [
-  { id: "sender",   label: "Sender Portal",    icon: Package,   accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
-  { id: "carrier",  label: "Carrier Portal",   icon: Truck,     accent: "bg-hitchBlue text-white",   tag: "hitch-blue" },
-  { id: "earnings", label: "Carrier Wallet",   icon: Wallet,    accent: "bg-emerald-600 text-white", tag: "earnings" },
-  { id: "admin",    label: "Admin Dashboard",  icon: BarChart3, accent: "bg-zinc-900 text-white",   tag: "admin" },
+  { id: "sender",   label: "Sender Portal",    icon: Package,           accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
+  { id: "carrier",  label: "Carrier Portal",   icon: PersonCarrierIcon, accent: "bg-hitchBlue text-white",   tag: "hitch-blue" },
+  { id: "earnings", label: "Carrier Wallet",   icon: Wallet,            accent: "bg-emerald-600 text-white", tag: "earnings" },
+  { id: "admin",    label: "Admin Dashboard",  icon: BarChart3,         accent: "bg-zinc-900 text-white",   tag: "admin" },
 ];
 
 const INITIAL_SHIPMENTS = [

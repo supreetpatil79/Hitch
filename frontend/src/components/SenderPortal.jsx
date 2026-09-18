@@ -9,6 +9,7 @@ import {
   Tag, Sliders, Image as ImageIcon, ChevronDown
 } from "lucide-react";
 import RoutePreviewIllustration from "./RoutePreviewIllustration";
+import PersonCarrierIcon from "./PersonCarrierIcon";
 
 const MATCHED_CARRIERS = [
   {
@@ -73,9 +74,9 @@ const TRUST_BADGES = [
 ];
 
 const HOW_IT_WORKS = [
-  { n:"01", title:"Post your package",       icon: Package,       desc:"Enter pickup & drop cities, parcel weight, and recipient details. Under 90 seconds." },
-  { n:"02", title:"Instant carrier match",   icon: Truck,         desc:"Our engine matches you with a verified traveler already headed to your destination." },
-  { n:"03", title:"OTP-secured handoff",     icon: Shield,        desc:"Carrier receives the parcel only after verifying your 4-digit Pickup OTP. Zero trust." },
+  { n:"01", title:"Post your package",       icon: Package,           desc:"Enter pickup & drop cities, parcel weight, and recipient details. Under 90 seconds." },
+  { n:"02", title:"Instant carrier match",   icon: PersonCarrierIcon, desc:"Our engine matches you with a verified traveler already headed to your destination." },
+  { n:"03", title:"OTP-secured handoff",     icon: Shield,            desc:"Carrier receives the parcel only after verifying your 4-digit Pickup OTP. Zero trust." },
   { n:"04", title:"Delivered. Escrow released.", icon: CheckCircle2, desc:"Recipient confirms with the Delivery OTP. Payment is released automatically. Done." },
 ];
 
@@ -1101,7 +1102,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-hitchOrange" /> Available Verified Carriers on Corridor
+                        <PersonCarrierIcon className="w-4 h-4 text-hitchOrange" /> Available Verified Carriers on Corridor
                       </h3>
                       <p className="text-xs text-zinc-400 mt-0.5">Select a traveler to view route transit animation and lock their schedule</p>
                     </div>
