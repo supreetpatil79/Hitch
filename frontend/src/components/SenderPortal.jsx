@@ -99,67 +99,46 @@ function ScrollTagline() {
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const lines = [
-    { words: [{ text: "Rail.", orange: false }, { text: " Road.", orange: false }] },
-    { words: [{ text: "Runway.", orange: true }] },
-    { words: [{ text: "Delivered.", orange: false }] },
-  ];
-
   return (
     <div
       ref={ref}
-      className="py-20 sm:py-28 overflow-hidden select-none"
+      className="py-16 sm:py-24 overflow-hidden select-none"
       aria-label="Rail. Road. Runway. Delivered."
     >
-      <div className="space-y-1 sm:space-y-2">
-        {lines.map((line, li) => (
-          <div
-            key={li}
-            className="overflow-hidden"
-          >
-            <p
-              className={
-                "font-display font-black leading-none tracking-tighter " +
-                "text-[13vw] sm:text-[11vw] lg:text-[9.5vw] xl:text-[8.5vw] " +
-                "transition-all duration-700 ease-out " +
-                (visible
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-full")
-              }
-              style={{ transitionDelay: `${li * 120}ms` }}
-            >
-              {line.words.map((w, wi) => (
-                <span
-                  key={wi}
-                  className={w.orange ? "text-hitchOrange" : "text-zinc-900"}
-                >
-                  {w.text}
-                </span>
-              ))}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Thin rule + sub-line */}
-      <div
-        className={
-          "mt-8 sm:mt-10 flex items-center gap-5 transition-all duration-700 ease-out " +
-          (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6")
-        }
-        style={{ transitionDelay: "420ms" }}
-      >
-        <div className="h-px bg-zinc-200 flex-1 max-w-[120px]" />
-        <p className="text-sm sm:text-base font-medium text-zinc-400 tracking-wide">
-          173 cities · verified carriers · OTP-secured handoff
+      {/* Single-line italic serif — matches the hero "with people." treatment */}
+      <div className="overflow-hidden">
+        <p
+          className={
+            "font-display italic leading-none " +
+            "text-[9vw] sm:text-[7.5vw] lg:text-[6.5vw] xl:text-[5.8vw] " +
+            "whitespace-nowrap transition-all duration-[900ms] ease-out " +
+            (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full")
+          }
+        >
+          <span className="text-zinc-900">Rail. </span>
+          <span className="text-hitchOrange">Road. </span>
+          <span className="text-zinc-900">Runway. </span>
+          <span className="text-hitchOrange">Delivered.</span>
         </p>
       </div>
+
+      {/* Sub-line */}
+      <p
+        className={
+          "mt-5 text-sm sm:text-base font-medium text-zinc-400 tracking-wide " +
+          "transition-all duration-700 ease-out " +
+          (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")
+        }
+        style={{ transitionDelay: "300ms" }}
+      >
+        173 cities · verified carriers · OTP-secured handoff
+      </p>
     </div>
   );
 }
