@@ -161,35 +161,24 @@ export default function App() {
           <button
             onClick={() => setPortal("sender")}
             title="Go to Hitch Homepage"
-            className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer">
+            className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer">
 
-            {/* Geometric SVG H lettermark */}
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"
-              className="group-hover:scale-105 transition-transform duration-200 flex-shrink-0">
-              {/* Left stem */}
-              <rect x="4" y="4" width="4" height="28" rx="2" fill="#F97316"/>
+            {/* Concept mark: H pillars + motion arrow = "two parties, one route" */}
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"
+              className="group-hover:scale-[1.06] transition-transform duration-200 flex-shrink-0">
+              {/* Left stem — thick, rounded caps */}
+              <rect x="3" y="3" width="6" height="34" rx="3" fill="#F97316"/>
               {/* Right stem */}
-              <rect x="28" y="4" width="4" height="28" rx="2" fill="#F97316"/>
-              {/* Crossbar — thinner, slightly above centre for elegance */}
-              <rect x="4" y="15.5" width="28" height="3" rx="1.5" fill="#F97316"/>
-              {/* Accent dot — bottom right, small geometric punctuation */}
-              <circle cx="32" cy="32" r="2" fill="#F97316" opacity="0.45"/>
+              <rect x="31" y="3" width="6" height="34" rx="3" fill="#F97316"/>
+              {/* Motion arrow crossbar: chevron pointing right — package in transit */}
+              <path d="M9 13 L29 20 L9 27" stroke="#F97316" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
 
-            {/* Weight-contrast wordmark: heavy H, light "itch" */}
-            <div className="flex flex-col leading-none">
-              <div className="flex items-baseline gap-[1px]">
-                <span className="font-display text-[22px] font-black text-zinc-900 leading-none tracking-tight group-hover:text-hitchOrange transition-colors duration-200">
-                  H
-                </span>
-                <span className="font-display text-[22px] font-light text-zinc-700 leading-none tracking-tight group-hover:text-zinc-900 transition-colors duration-200">
-                  itch
-                </span>
-              </div>
-              <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-zinc-400 mt-[3px]">
-                Rail · Road · Runway
-              </p>
-            </div>
+            {/* Wordmark: HITCH all-caps, tight tracking, one weight */}
+            <span
+              className="font-display text-[20px] font-bold tracking-[0.14em] text-zinc-900 leading-none group-hover:text-hitchOrange transition-colors duration-200 uppercase">
+              Hitch
+            </span>
           </button>
 
           {/* Desktop Portal Switcher */}
