@@ -161,10 +161,10 @@ export default function App() {
           <button
             onClick={() => setPortal("sender")}
             title="Go to Hitch Homepage"
-            className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-hitchOrange to-hitchBlue flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
+            className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer">
+            <span className="font-display text-3xl font-extrabold text-hitchOrange leading-none tracking-tight group-hover:scale-105 transition-transform">
               H
-            </div>
+            </span>
             <div>
               <span className="font-display text-2xl tracking-tight text-zinc-900 leading-none group-hover:text-hitchOrange transition-colors">
                 Hitch
