@@ -973,7 +973,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
                               <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">₹{pricing.ratePerKg}/kg</span>
                               <span className="text-xs font-bold text-hitchOrange">₹{pricing.totalSenderPrice}</span>
                             </div>
-                            <p className="text-[9px] text-zinc-400">Carrier gets ₹{pricing.carrierPayout} (62%)</p>
+                            <p className="text-[9px] text-emerald-600 font-semibold">Verified Direct Commuter</p>
                           </div>
                         </div>
                       );
@@ -1068,20 +1068,18 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
               <span className="text-zinc-500 line-through text-[11px]">Courier: ₹{currentPricing.traditionalCourierPrice}</span>
             </div>
 
-            {/* 38% / 62% Revenue Split Breakdown */}
+            {/* Transparent Rate Breakdown */}
             <div className="space-y-2.5 text-xs bg-zinc-50/70 rounded-2xl p-4 border border-zinc-100">
               <div className="flex justify-between text-zinc-600">
-                <span className="flex items-center gap-1.5">
-                  <PersonCarrierIcon className="w-3.5 h-3.5 text-hitchBlue" /> Carrier Payout (62% to {selectedCarrier?.carrierName || "Rahul Verma"})
-                </span>
-                <span className="font-bold text-zinc-900">₹{currentPricing.carrierPayout}</span>
+                <span>Intercity Commuter Fare</span>
+                <span className="font-bold text-zinc-900">₹{currentPricing.totalSenderPrice}</span>
               </div>
               <div className="flex justify-between text-zinc-600">
-                <span>🏛️ Hitch Platform Fee (38% — AWS Escrow &amp; AI)</span>
-                <span className="font-bold text-zinc-900">₹{currentPricing.hitchCommission}</span>
+                <span>Bedrock AI Inspection &amp; Escrow</span>
+                <span className="font-semibold text-emerald-600">Included (₹0)</span>
               </div>
               <div className="border-t border-zinc-200/60 pt-2 flex justify-between text-[11px] text-zinc-400">
-                <span>Pricing Mode Slab: {TRANSPORT_RATES[selectedCarrier?.mode || "train"]?.label}</span>
+                <span>Transport Rate: {TRANSPORT_RATES[selectedCarrier?.mode || "train"]?.label}</span>
                 <span>₹{currentPricing.ratePerKg}/kg</span>
               </div>
             </div>

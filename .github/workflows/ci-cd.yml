@@ -1,0 +1,66 @@
+name: Hitch Platform CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ============================================================================
+  # 1. FRONTEND CI: LINT, TEST & VITE BUILD
+  # ============================================================================
+  frontend-ci:
+    name: Frontend Build & Verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Production SPA
+        run: npm run build
+
+  # ============================================================================
+  # 2. BACKEND CI: PYTHON MATCHER TESTS & SAM TEMPLATE VALIDATION
+  # ============================================================================
+  backend-ci:
+    name: Backend Test & SAM Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Corridor Matcher Unit Tests
+        run: |
+          python3 backend/core/matcher.py
+
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Validate SAM Infrastructure Template
+        run: |
+          sam validate --template backend/template.yaml --lint
+
+      - name: Build SAM Serverless Application
+        run: |
+          sam build --template backend/template.yaml

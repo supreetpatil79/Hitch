@@ -189,6 +189,8 @@ Resources:
               Action:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
+                - rekognition:DetectLabels
+                - rekognition:DetectModerationLabels
               Resource: "*"
       Events:
         ChatAdvisorApi:

@@ -76,7 +76,7 @@ function TripSnapshotSidebar({ step, trip }) {
           { icon: Navigation, label: "Lane", value: trip.fromCity && trip.toCity ? `${trip.fromCity} → ${trip.toCity}` : "Route pending", done: !!(trip.fromCity && trip.toCity) },
           { icon: Clock, label: "Schedule", value: trip.departureDate ? `${trip.departureDate.replace("T", " ")}` : "Add departure timing", done: !!trip.departureDate },
           { icon: Package, label: "Capacity", value: `${trip.capacityKg} kg · ${trip.acceptedCats.length} category rules`, done: trip.capacityKg > 0 },
-          { icon: IndianRupee, label: "Your Payout (62%)", value: `₹${pricing.carrierPayout}.00 net payout`, done: trip.capacityKg > 0 },
+          { icon: IndianRupee, label: "Estimated Trip Payout", value: `₹${pricing.carrierPayout}.00 net payout`, done: trip.capacityKg > 0 },
         ].map(item => {
           const Icon = item.icon;
           return (
@@ -566,18 +566,18 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
 
                           <div className="space-y-3">
                             <div className="bg-linear-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-200 rounded-2xl p-4 shadow-xs">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Your Take-Home Payout (62%)</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Your Net Trip Earnings</p>
                               <p className="text-3xl font-bold text-emerald-700 mt-1">₹{pricing.carrierPayout}</p>
-                              <p className="text-[10px] text-emerald-800 mt-0.5">Credited to Amazon Pay Wallet upon Delivery OTP.</p>
+                              <p className="text-[10px] text-emerald-800 mt-0.5">Credited to your Wallet instantly upon Delivery OTP.</p>
                             </div>
                             <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs space-y-2">
                               <div className="flex justify-between items-center text-xs">
-                                <span className="text-zinc-500">Hitch Platform Fee (38%)</span>
-                                <span className="font-bold text-zinc-700">₹{pricing.hitchCommission}</span>
+                                <span className="text-zinc-500">Gross Freight Rate</span>
+                                <span className="font-bold text-zinc-700">₹{pricing.totalSenderPrice}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs border-t border-zinc-100 pt-2">
-                                <span className="font-bold text-zinc-900">Total Gross Booking</span>
-                                <span className="font-bold text-zinc-900 text-sm">₹{pricing.totalSenderPrice}</span>
+                                <span className="font-bold text-emerald-700">Guaranteed Take-Home</span>
+                                <span className="font-bold text-emerald-700 text-sm">₹{pricing.carrierPayout}</span>
                               </div>
                             </div>
                           </div>
