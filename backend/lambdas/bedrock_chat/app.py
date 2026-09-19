@@ -1,8 +1,11 @@
 import json
 import os
 import base64
+import hashlib
+import time
 import boto3
 from datetime import datetime, timezone
+from collections import defaultdict
 
 bedrock_client = boto3.client(
     'bedrock-runtime',
@@ -15,6 +18,48 @@ rekognition_client = boto3.client(
 )
 
 MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20241022-v2:0')
+
+# ============================================================================
+# IN-MEMORY RATE LIMITER & SHA-256 CACHE LAYER
+# ============================================================================
+RATE_LIMIT_WINDOW = 60  # 60-second sliding window
+MAX_REQUESTS_PER_WINDOW = 20  # 20 requests per minute per IP
+_ip_request_history = defaultdict(list)
+
+CACHE_TTL_SECONDS = 3600  # 1 hour cache TTL
+_inspection_cache = {}   # sha256_hash -> (timestamp, inspection_data)
+
+def check_rate_limit(client_ip: str) -> tuple[bool, int]:
+    """Sliding-window rate limiter. Returns (is_allowed, remaining_requests)."""
+    now = time.time()
+    history = _ip_request_history[client_ip]
+    # Remove timestamps older than window
+    _ip_request_history[client_ip] = [t for t in history if now - t < RATE_LIMIT_WINDOW]
+    
+    if len(_ip_request_history[client_ip]) >= MAX_REQUESTS_PER_WINDOW:
+        return False, 0
+    
+    _ip_request_history[client_ip].append(now)
+    remaining = MAX_REQUESTS_PER_WINDOW - len(_ip_request_history[client_ip])
+    return True, remaining
+
+def get_cached_inspection(image_hash: str):
+    """Retrieve cached Rekognition result if within TTL."""
+    if image_hash in _inspection_cache:
+        cached_time, data = _inspection_cache[image_hash]
+        if time.time() - cached_time < CACHE_TTL_SECONDS:
+            return data
+        else:
+            del _inspection_cache[image_hash]
+    return None
+
+def set_cached_inspection(image_hash: str, data):
+    """Store Rekognition inspection in cache."""
+    # Simple LRU eviction if cache exceeds 500 items
+    if len(_inspection_cache) > 500:
+        oldest_key = min(_inspection_cache.keys(), key=lambda k: _inspection_cache[k][0])
+        del _inspection_cache[oldest_key]
+    _inspection_cache[image_hash] = (time.time(), data)
 
 PROHIBITED_KEYWORDS = {
     'gun', 'firearm', 'pistol', 'handgun', 'revolver', 'rifle', 'shotgun', 'weapon',
@@ -50,8 +95,16 @@ def inspect_image_deep(image_base64):
     Multi-Layer Computer Vision Safety Inspection via Amazon Rekognition:
     1. Moderation Labels (Weapons, Violence, Drugs, Hate, Alcohol)
     2. Object & Concept Labels (Knives, Firearms, Blades, Scissors, Hazardous items)
+    Includes in-memory SHA-256 caching for zero-latency duplicate scans.
     """
     try:
+        # Check SHA-256 cache
+        image_hash = hashlib.sha256(image_base64.encode('utf-8')).hexdigest()
+        cached = get_cached_inspection(image_hash)
+        if cached:
+            cached["cached"] = True
+            return cached
+
         image_bytes = base64.b64decode(image_base64)
 
         # Layer 1: Moderation Labels
@@ -104,12 +157,14 @@ def inspect_image_deep(image_base64):
 
         all_hazards = list(set(moderation_hazards + detected_hazards))
 
-        return {
+        result = {
             "is_hazardous": len(all_hazards) > 0,
             "hazards": all_hazards,
             "safe_elements": detected_safe,
             "all_labels": [l.get('Name') for l in all_labels]
         }
+        set_cached_inspection(image_hash, result)
+        return result
 
     except Exception as e:
         print(f"Deep inspection error: {str(e)}")
@@ -297,11 +352,30 @@ def lambda_handler(event, context):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type,Authorization",
-        "Access-Control-Allow-Methods": "OPTIONS,POST"
+        "Access-Control-Allow-Methods": "OPTIONS,POST",
+        "X-Cache": "MISS"
     }
 
     if event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
         return {"statusCode": 200, "headers": headers, "body": json.dumps({"status": "ok"})}
+
+    # Rate Limiting Check (Sliding Window per IP)
+    client_ip = event.get("requestContext", {}).get("http", {}).get("sourceIp", "unknown_client")
+    is_allowed, remaining = check_rate_limit(client_ip)
+    headers["X-RateLimit-Limit"] = str(MAX_REQUESTS_PER_WINDOW)
+    headers["X-RateLimit-Remaining"] = str(remaining)
+
+    if not is_allowed:
+        headers["Retry-After"] = "60"
+        return {
+            "statusCode": 429,
+            "headers": headers,
+            "body": json.dumps({
+                "error": "Too Many Requests",
+                "message": f"Rate limit of {MAX_REQUESTS_PER_WINDOW} requests/minute exceeded. Please slow down.",
+                "retry_after_seconds": 60
+            })
+        }
 
     try:
         body = json.loads(event.get("body", "{}"))
@@ -315,6 +389,8 @@ def lambda_handler(event, context):
     # Run deep visual inspection whenever an image is present
     if image_base64:
         inspection = inspect_image_deep(image_base64)
+        if inspection.get("cached"):
+            headers["X-Cache"] = "HIT"
         if inspection["is_hazardous"]:
             hazard_str = ", ".join(inspection["hazards"]) or "Firearm / Weapon / Prohibited Item"
             reply = f"""⚠️ **SAFETY AUDIT REJECTED: PROHIBITED CONTRABAND DETECTED**
