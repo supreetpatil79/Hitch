@@ -93,52 +93,155 @@ const STATUS_STYLE = {
 function ScrollTagline() {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [activeWord, setActiveWord] = useState(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.2 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+        }
+      },
+      { threshold: 0.15 }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
+  const WORDS = [
+    { text: "Rail.", color: "text-zinc-950", mode: "train", delay: 0 },
+    { text: "Road.", color: "text-hitchOrange", mode: "road", delay: 120 },
+    { text: "Runway.", color: "text-zinc-950", mode: "air", delay: 240 },
+    { text: "Delivered.", color: "text-hitchOrange", mode: "escrow", delay: 360 },
+  ];
+
+  const STATS = [
+    { mode: "train", icon: Train, label: "Vande Bharat / Rail", detail: "130 km/h Trunk Speed" },
+    { mode: "road", icon: Car, label: "Expressways & Buses", detail: "Same-Day Regional" },
+    { mode: "air", icon: Plane, label: "Aviation Carriers", detail: "840 km/h Air Corridors" },
+    { mode: "escrow", icon: ShieldCheck, label: "Zero-Trust OTP", detail: "100% Escrow Sealed" },
+  ];
+
   return (
     <div
       ref={ref}
-      className="py-16 sm:py-24 overflow-hidden select-none"
+      className="relative py-14 sm:py-20 lg:py-24 my-4 overflow-hidden rounded-3xl border border-zinc-200/70 bg-gradient-to-b from-white/90 via-orange-50/20 to-white/80 backdrop-blur-xl shadow-xs transition-all duration-700 select-none group"
       aria-label="Rail. Road. Runway. Delivered."
     >
-      {/* Single-line italic serif — matches the hero "with people." treatment */}
-      <div className="overflow-hidden">
-        <p
+      {/* Ambient background glow that blooms into view */}
+      <div
+        className={
+          "absolute -top-24 left-1/2 -translate-x-1/2 w-[75vw] h-48 bg-gradient-to-r from-orange-400/15 via-amber-400/25 to-orange-500/15 blur-3xl pointer-events-none transition-all duration-1000 " +
+          (visible ? "opacity-100 scale-100" : "opacity-0 scale-75")
+        }
+      />
+
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-8 flex flex-col items-center text-center">
+        {/* Network status badge */}
+        <div
           className={
-            "font-display italic leading-none " +
-            "text-[9vw] sm:text-[7.5vw] lg:text-[6.5vw] xl:text-[5.8vw] " +
-            "whitespace-nowrap transition-all duration-[900ms] ease-out " +
-            (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full")
+            "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 border border-orange-200/80 shadow-xs mb-5 transition-all duration-700 ease-out " +
+            (visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4")
           }
         >
-          <span className="text-zinc-900">Rail. </span>
-          <span className="text-hitchOrange">Road. </span>
-          <span className="text-zinc-900">Runway. </span>
-          <span className="text-hitchOrange">Delivered.</span>
-        </p>
-      </div>
+          <span className="w-2 h-2 rounded-full bg-hitchOrange animate-pulse" />
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-700">
+            India's Peer-to-Peer Transit Network
+          </span>
+        </div>
 
-      {/* Sub-line */}
-      <p
-        className={
-          "mt-5 text-sm sm:text-base font-medium text-zinc-400 tracking-wide " +
-          "transition-all duration-700 ease-out " +
-          (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")
-        }
-        style={{ transitionDelay: "300ms" }}
-      >
-        173 cities · verified carriers · OTP-secured handoff
-      </p>
+        {/* Single-line massive italic serif display text */}
+        <div className="w-full overflow-x-auto overflow-y-hidden scrollbar-hide py-1">
+          <p className="font-display italic leading-none text-[9.5vw] sm:text-[7.8vw] lg:text-[6.8vw] xl:text-[5.9vw] whitespace-nowrap flex items-center justify-center gap-2 sm:gap-3 lg:gap-4.5">
+            {WORDS.map((w, i) => {
+              const isHighlighted = activeWord === w.mode;
+              return (
+                <span
+                  key={i}
+                  onMouseEnter={() => setActiveWord(w.mode)}
+                  onMouseLeave={() => setActiveWord(null)}
+                  style={{
+                    transitionDelay: visible ? `${w.delay}ms` : "0ms",
+                    transitionDuration: "800ms",
+                  }}
+                  className={
+                    "inline-block transform cursor-pointer transition-all duration-300 ease-out " +
+                    (visible
+                      ? "opacity-100 translate-y-0 scale-100 blur-0"
+                      : "opacity-0 translate-y-12 scale-95 blur-xs") +
+                    " " +
+                    (isHighlighted
+                      ? "scale-105 text-hitchOrange drop-shadow-[0_8px_24px_rgba(255,92,40,0.35)]"
+                      : w.color + " hover:scale-105 hover:text-hitchOrange transition-transform")
+                  }
+                >
+                  {w.text}
+                </span>
+              );
+            })}
+          </p>
+        </div>
+
+        {/* Interactive transport & escrow capsules */}
+        <div
+          className={
+            "mt-8 sm:mt-10 grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-4xl transition-all duration-700 ease-out " +
+            (visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8")
+          }
+          style={{ transitionDelay: "480ms" }}
+        >
+          {STATS.map((s, idx) => {
+            const Icon = s.icon;
+            const isHovered = activeWord === s.mode;
+            return (
+              <div
+                key={idx}
+                onMouseEnter={() => setActiveWord(s.mode)}
+                onMouseLeave={() => setActiveWord(null)}
+                className={
+                  "flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all duration-300 cursor-pointer " +
+                  (isHovered
+                    ? "bg-white border-hitchOrange shadow-md shadow-orange-500/15 -translate-y-1"
+                    : "bg-white/70 hover:bg-white border-zinc-200/80 hover:border-zinc-300 shadow-2xs hover:-translate-y-0.5")
+                }
+              >
+                <div
+                  className={
+                    "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors " +
+                    (isHovered ? "bg-orange-500 text-white" : "bg-orange-50 text-hitchOrange")
+                  }
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-zinc-900 truncate leading-tight">{s.label}</p>
+                  <p className="text-[10px] text-zinc-500 truncate mt-0.5 font-medium">{s.detail}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Dynamic subtext with live stats indicator */}
+        <div
+          className={
+            "mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-500 font-medium transition-all duration-700 " +
+            (visible ? "opacity-100" : "opacity-0")
+          }
+          style={{ transitionDelay: "620ms" }}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>173 Connected Hubs</span>
+          </span>
+          <span className="text-zinc-300">·</span>
+          <span>Zero Deadhead Miles</span>
+          <span className="text-zinc-300">·</span>
+          <span>Banknote-Sealed Handshakes</span>
+        </div>
+      </div>
     </div>
   );
 }
