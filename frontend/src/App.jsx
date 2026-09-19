@@ -28,8 +28,8 @@ const INITIAL_SHIPMENTS = [
     deliveryOtp: "7104",
     banknoteSerial: "5AC 123456",
     sender: "Supreet P.",
-    recipient: "Aarav Sharma",
-    recipientPhone: "+91 98765 43210",
+    recipient: "Aarav S.",
+    recipientPhone: "+91 98*** **210",
     eta: "Today 6:30 PM",
     carrier: "Rahul V."
   },
@@ -47,7 +47,7 @@ const INITIAL_SHIPMENTS = [
     banknoteSerial: "7LK 901234",
     sender: "Meera J.",
     recipient: "Priya S.",
-    recipientPhone: "+91 91234 56789",
+    recipientPhone: "+91 91*** **789",
     eta: "Today 4:00 PM",
     carrier: "Suresh K."
   },
@@ -65,7 +65,7 @@ const INITIAL_SHIPMENTS = [
     banknoteSerial: "2XY 445566",
     sender: "Amit K.",
     recipient: "Vikram R.",
-    recipientPhone: "+91 98111 22334",
+    recipientPhone: "+91 98*** **334",
     eta: "Delivered",
     carrier: "Amit K."
   }

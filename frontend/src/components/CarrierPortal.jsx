@@ -734,8 +734,8 @@ export default function CarrierPortal({ shipments, activeShipmentId, onUpdateSta
       payout: 180,
       pickupOtp: "4829",
       deliveryOtp: "7104",
-      recipient: "Aarav Sharma",
-      recipientPhone: "+91 98765 43210"
+      recipient: "Aarav S.",
+      recipientPhone: "+91 98*** **210"
     };
 
     return (

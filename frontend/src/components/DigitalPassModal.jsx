@@ -78,13 +78,20 @@ export default function DigitalPassModal({ isOpen, onClose, shipment }) {
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <p className="text-[10px] font-bold uppercase text-zinc-400">Carrier / Commuter</p>
-                <p className="font-bold text-zinc-900 text-sm mt-0.5">{shipment.carrier || "Verified Regular"}</p>
+                <p className="font-bold text-zinc-900 text-sm mt-0.5">
+                  {shipment.carrier ? `${shipment.carrier.split(" ")[0]} ${shipment.carrier.split(" ")[1]?.[0] || ""}.` : "Verified Regular"}
+                </p>
                 <p className="text-[10px] text-zinc-500">{shipment.transportName || "Trunk Corridor Commuter"}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase text-zinc-400">Recipient</p>
-                <p className="font-bold text-zinc-900 text-sm mt-0.5">{shipment.recipient || "Verified Recipient"}</p>
-                <p className="text-[10px] text-zinc-500">{shipment.recipientPhone || "+91 98765 43210"}</p>
+                <p className="font-bold text-zinc-900 text-sm mt-0.5">
+                  {shipment.recipient ? `${shipment.recipient.split(" ")[0]} ${shipment.recipient.split(" ")[1]?.[0] || ""}.` : "Verified Recipient"}
+                </p>
+                <p className="text-[10px] font-mono text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600 inline" />
+                  +91 98*** **210 (Masked Relay)
+                </p>
               </div>
             </div>
 

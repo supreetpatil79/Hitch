@@ -240,9 +240,11 @@ function RegulatoryLabelModal({ isOpen, onClose, form, trackingId }) {
               </div>
               <div className="space-y-1">
                 <p className="text-[9px] font-bold uppercase text-zinc-500">CONSIGNEE (RECIPIENT)</p>
-                <p className="font-bold text-sm">{form.recipientName || "Aarav Sharma"}</p>
-                <p className="text-zinc-600">Phone: {form.recipientPhone || "+91 98765 43210"}</p>
-                <p className="text-zinc-600 truncate">Dest: {form.recipientAddress || "City Terminal Point"}</p>
+                <p className="font-bold text-sm">
+                  {form.recipientName ? `${form.recipientName.split(" ")[0]} ${form.recipientName.split(" ")[1]?.[0] || ""}.` : "Aarav S."}
+                </p>
+                <p className="text-zinc-600 font-mono text-[11px]">Phone: +91 98*** **210 (Masked Relay)</p>
+                <p className="text-zinc-600 truncate">Dest: {form.toCity ? `${form.toCity} Terminal Hub` : "City Terminal Point"}</p>
               </div>
             </div>
 
