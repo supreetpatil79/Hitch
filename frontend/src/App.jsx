@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Package, Truck, BarChart3, Globe, BadgeCheck, Sparkles, Wallet } from "lucide-react";
+import { Package, Truck, BarChart3, Globe, BadgeCheck, Sparkles, Wallet, MessageSquare } from "lucide-react";
 import SenderPortal from "./components/SenderPortal";
 import CarrierPortal from "./components/CarrierPortal";
 import EarningsPortal from "./components/EarningsPortal";
 import AdminPortal from "./components/AdminPortal";
 import PersonCarrierIcon from "./components/PersonCarrierIcon";
+import AskHitchAIModal from "./components/AskHitchAIModal";
 
 const PORTALS = [
   { id: "sender",   label: "Sender Portal",    icon: Package,           accent: "bg-hitchOrange text-white", tag: "hitch-orange" },
@@ -48,7 +49,7 @@ const INITIAL_SHIPMENTS = [
     recipient: "Priya S.",
     recipientPhone: "+91 91234 56789",
     eta: "Today 4:00 PM",
-    carrier: "Priya S."
+    carrier: "Suresh K."
   },
   {
     id: "HTX-4710",
@@ -73,65 +74,59 @@ const INITIAL_SHIPMENTS = [
 export default function App() {
   const [portal, setPortal] = useState("sender");
   const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
-  const [activeShipmentId, setActiveShipmentId] = useState("HTX-4821");
+  const [activeShipmentId, setActiveShipmentId] = useState(null);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // Carrier Wallet State (synced with OTP handshakes in real time)
   const [carrierWallet, setCarrierWallet] = useState({
-    availableBalance: 4200,
-    escrowPending: 260,
-    lifetimeEarned: 42300,
+    availableBalance: 840,
+    totalEarned: 3250,
+    pendingEscrow: 480,
+    completedDeliveries: 14,
+    rating: 4.96,
+    trustTier: "Top Rated Commuter",
     transactions: [
-      { id: "TXN-8842", type: "ESCROW_PAYOUT", description: "Delivered: Mumbai → Pune", route: "Mumbai → Pune", amount: 350, time: "Today 4:15 PM", status: "SETTLED" },
-      { id: "TXN-8840", type: "WITHDRAWAL", description: "Instant Withdrawal to Amazon Pay", route: "Amazon Pay Wallet", amount: 1500, time: "Yesterday", status: "COMPLETED" },
-      { id: "TXN-8835", type: "ESCROW_PAYOUT", description: "Delivered: Delhi → Chandigarh", route: "Delhi → Chandigarh", amount: 620, time: "Sep 15", status: "SETTLED" },
+      { id: "TXN-8821", type: "PAYOUT_RELEASED", description: "Vande Bharat Leg (BLR -> CHN)", route: "TRAIN #20608", amount: 180, time: "2 hours ago", status: "COMPLETED" },
+      { id: "TXN-8740", type: "PAYOUT_RELEASED", description: "Expressway Trunk (PNQ -> BOM)", route: "CAR #MH12-582", amount: 340, time: "Yesterday", status: "COMPLETED" },
+      { id: "TXN-8602", type: "WITHDRAWAL", description: "Instant UPI Transfer to @okhdfcbank", route: "UPI INSTANT", amount: -1200, time: "3 days ago", status: "COMPLETED" }
     ]
   });
 
   // Add new shipment from Sender Portal
-  const handleAddShipment = (newPkg) => {
-    setShipments(prev => [newPkg, ...prev]);
-    setActiveShipmentId(newPkg.id);
-
-    // Increase escrow pending on new booking
-    setCarrierWallet(prev => ({
-      ...prev,
-      escrowPending: prev.escrowPending + (newPkg.payout || 180)
-    }));
+  const handleAddShipment = (newShipment) => {
+    setShipments(prev => [newShipment, ...prev]);
+    setActiveShipmentId(newShipment.id);
   };
 
   // Update shipment status (e.g. MATCHED -> IN_TRANSIT -> DELIVERED)
-  const handleUpdateStatus = (id, newStatus) => {
+  const handleUpdateStatus = (shipmentId, newStatus) => {
     setShipments(prev => prev.map(s => {
-      if (s.id === id) {
+      if (s.id === shipmentId) {
+        if (newStatus === "DELIVERED" && s.status !== "DELIVERED") {
+          const payoutAmount = s.payout || 180;
+          setCarrierWallet(w => ({
+            ...w,
+            availableBalance: w.availableBalance + payoutAmount,
+            totalEarned: w.totalEarned + payoutAmount,
+            completedDeliveries: w.completedDeliveries + 1,
+            transactions: [
+              {
+                id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
+                type: "PAYOUT_RELEASED",
+                description: `Delivered ${s.category} (${s.from} -> ${s.to})`,
+                route: `${s.mode?.toUpperCase() || "TRAIN"} CARRIER`,
+                amount: payoutAmount,
+                time: "Just now",
+                status: "COMPLETED"
+              },
+              ...w.transactions
+            ]
+          }));
+        }
         return { ...s, status: newStatus };
       }
       return s;
     }));
-
-    // If delivered, automatically credit the carrier wallet in real time!
-    if (newStatus === "DELIVERED") {
-      const targetPkg = shipments.find(s => s.id === id) || { payout: 180, from: "Origin", to: "Destination" };
-      const payoutAmount = targetPkg.payout || 180;
-
-      setCarrierWallet(prev => ({
-        ...prev,
-        availableBalance: prev.availableBalance + payoutAmount,
-        lifetimeEarned: prev.lifetimeEarned + payoutAmount,
-        escrowPending: Math.max(0, prev.escrowPending - payoutAmount),
-        transactions: [
-          {
-            id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-            type: "ESCROW_PAYOUT",
-            description: `Delivered: ${targetPkg.from} → ${targetPkg.to}`,
-            route: `${targetPkg.from} → ${targetPkg.to}`,
-            amount: payoutAmount,
-            time: "Just now",
-            status: "SETTLED"
-          },
-          ...prev.transactions
-        ]
-      }));
-    }
   };
 
   // Handle Instant Withdrawal
@@ -156,21 +151,29 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Global Ask Hitch AI Modal */}
+      <AskHitchAIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+
       {/* Global Top Nav */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zincBorder shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-zincBorder shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-hitchOrange to-hitchBlue flex items-center justify-center text-white font-bold text-xl shadow-md">
+          {/* Brand - Clickable to return to Homepage */}
+          <button
+            onClick={() => setPortal("sender")}
+            title="Go to Hitch Homepage"
+            className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-hitchOrange to-hitchBlue flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
               H
             </div>
             <div>
-              <span className="font-display text-2xl tracking-tight text-zinc-900 leading-none">Hitch</span>
+              <span className="font-display text-2xl tracking-tight text-zinc-900 leading-none group-hover:text-hitchOrange transition-colors">
+                Hitch
+              </span>
               <p className="text-[10px] font-semibold tracking-wide text-zinc-500 mt-0.5">
                 Rail · Road · Runway · Delivered.
               </p>
             </div>
-          </div>
+          </button>
 
           {/* Desktop Portal Switcher */}
           <nav className="hidden md:flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200 gap-0.5">
@@ -184,17 +187,23 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Right: Carrier Wallet Balance Indicator */}
+          {/* Right: Ask Hitch AI + Carrier Wallet */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => setPortal("earnings")}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 transition-all shadow-xs">
+            {/* Ask Hitch AI Button */}
+            <button
+              onClick={() => setIsAIModalOpen(true)}
+              className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-500/20 hover:scale-105 transition-all">
+              <Sparkles className="w-3.5 h-3.5 animate-spin" />
+              <span>Ask Hitch AI</span>
+            </button>
+
+            {/* Carrier Wallet Indicator */}
+            <button
+              onClick={() => setPortal("earnings")}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 transition-all shadow-2xs">
               <Wallet className="w-3.5 h-3.5 text-emerald-600" />
               <span>₹{carrierWallet.availableBalance.toLocaleString()}</span>
             </button>
-            <div className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-zinc-500 border-l border-zinc-200 pl-3">
-              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-              <span>Bedrock AI</span>
-            </div>
           </div>
         </div>
       </header>

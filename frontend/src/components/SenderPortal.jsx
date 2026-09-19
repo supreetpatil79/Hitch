@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import RoutePreviewIllustration from "./RoutePreviewIllustration";
 import PersonCarrierIcon from "./PersonCarrierIcon";
+import AskHitchAIModal from "./AskHitchAIModal";
 import { calculatePricing, TRANSPORT_RATES, HITCH_COMMISSION_PERCENT, CARRIER_PAYOUT_PERCENT } from "../utils/pricing";
 
 const MATCHED_CARRIERS = [
@@ -372,242 +373,6 @@ function AmazonPaySandboxModal({ isOpen, onClose, amount, onPaymentSuccess }) {
   );
 }
 
-// Floating Modern AI Packaging Drawer Component
-function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
-  if (!isOpen) return null;
-
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: "bot",
-      text: "Hi! I'm your Hitch Packaging Advisor, powered by Amazon Bedrock (Claude 3.5 Sonnet). Ask me anything about packing your parcel, tamper-proofing, or upload a photo for a real AI safety inspection.",
-      time: "Just now",
-      suggestions: [
-        "How do I tamper-proof an electronics package?",
-        "How does the ₹10 Banknote Seal work?",
-        "What counts as a prohibited item?"
-      ]
-    }
-  ]);
-
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState([]);
-  const fileInputRef = useRef(null);
-  const chatEndRef = useRef(null);
-
-  const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || "";
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
-
-  const getPackageContext = () => ({
-    category: form?.category || null,
-    weight: form?.weightKg || null,
-    mode: form?.preferredMode || null,
-    from: form?.fromCity || null,
-    to: form?.toCity || null,
-  });
-
-  const callBedrockChat = async ({ userMessage, imageBase64, imageMediaType }) => {
-    if (!CHAT_API_URL) throw new Error("VITE_CHAT_API_URL not configured");
-    const response = await fetch(CHAT_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMessage || "",
-        conversation_history: conversationHistory,
-        package_context: getPackageContext(),
-        image_base64: imageBase64 || null,
-        image_media_type: imageMediaType || null,
-      }),
-    });
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    return await response.json();
-  };
-
-  const addBotMessage = (text, suggestions = []) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now() + 1,
-        sender: "bot",
-        text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        suggestions,
-      },
-    ]);
-  };
-
-  const handleSend = async (textToSend) => {
-    const query = (textToSend || input).trim();
-    if (!query) return;
-
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), sender: "user", text: query, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
-    ]);
-    setInput("");
-    setIsTyping(true);
-
-    try {
-      const data = await callBedrockChat({ userMessage: query });
-      setConversationHistory(prev => [
-        ...prev,
-        { role: "user", content: [{ type: "text", text: query }] },
-        { role: "assistant", content: [{ type: "text", text: data.reply }] },
-      ]);
-      addBotMessage(data.reply, data.suggestions || []);
-    } catch (err) {
-      console.error("Bedrock chat error:", err);
-      addBotMessage(
-        "Having trouble reaching Amazon Bedrock right now. Check your network and try again.",
-        ["How to pack fragile items?", "What is the ₹10 Banknote Seal?"]
-      );
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), sender: "user", text: `📸 ${file.name}`, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
-    ]);
-    setIsTyping(true);
-
-    try {
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const mediaType = file.type === "image/png" ? "image/png" : "image/jpeg";
-      const data = await callBedrockChat({ userMessage: "Inspect this parcel photo.", imageBase64: base64, imageMediaType: mediaType });
-      setConversationHistory(prev => [
-        ...prev,
-        { role: "user", content: [{ type: "text", text: `[Image: ${file.name}]` }] },
-        { role: "assistant", content: [{ type: "text", text: data.reply }] },
-      ]);
-      addBotMessage(data.reply, data.suggestions || []);
-    } catch (err) {
-      console.error("Photo inspection error:", err);
-      addBotMessage(
-        "Could not process the image via Bedrock. Try again or describe your packaging and I'll advise manually.",
-        ["Describe my packaging", "How to seal fragile items?"]
-      );
-    } finally {
-      setIsTyping(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const renderText = (text) =>
-    text.split("\n").map((line, i) => {
-      const parts = line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-        part.startsWith("**") && part.endsWith("**")
-          ? <strong key={j}>{part.slice(2, -2)}</strong>
-          : part
-      );
-      return <span key={i}>{parts}{i < text.split("\n").length - 1 && <br />}</span>;
-    });
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-end sm:justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-fadeIn">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full h-[85vh] sm:h-[620px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-zinc-900 to-zinc-800 text-white p-4 flex items-center justify-between border-b border-zinc-700 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-hitchOrange/20 border border-hitchOrange/40 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-hitchOrange" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold">Packaging Advisor</h3>
-                <span className="text-[9px] font-mono bg-violet-900/80 text-violet-200 px-1.5 py-0.5 rounded border border-violet-700">Claude 3.5 · Bedrock</span>
-              </div>
-              <p className="text-[10px] text-zinc-400">AI packing guide &amp; photo safety audit</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-all">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Chat Body */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-zinc-50/50 text-xs">
-          {messages.map(m => (
-            <div key={m.id} className={"flex flex-col " + (m.sender === "user" ? "items-end" : "items-start")}>
-              <div className={"max-w-[85%] rounded-2xl p-3.5 space-y-1.5 " +
-                (m.sender === "user"
-                  ? "bg-hitchOrange text-white rounded-br-xs shadow-xs"
-                  : "bg-white text-zinc-800 border border-zinc-200/80 rounded-bl-xs shadow-xs")}>
-                <p className="leading-relaxed">{m.sender === "bot" ? renderText(m.text) : m.text}</p>
-                <span className={"text-[9px] block text-right " + (m.sender === "user" ? "text-orange-100" : "text-zinc-400")}>{m.time}</span>
-              </div>
-              {m.suggestions && m.suggestions.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
-                  {m.suggestions.map((s, idx) => (
-                    <button key={idx}
-                      onClick={() => {
-                        if (s.toLowerCase().includes("photo") || s.toLowerCase().includes("upload")) fileInputRef.current?.click();
-                        else handleSend(s);
-                      }}
-                      className="text-[10px] font-medium bg-white text-zinc-700 border border-zinc-200 hover:border-hitchOrange hover:text-hitchOrange px-2.5 py-1 rounded-full shadow-xs transition-all flex items-center gap-1">
-                      {s.toLowerCase().includes("photo") || s.toLowerCase().includes("upload")
-                        ? <ImageIcon className="w-3 h-3 text-blue-500" />
-                        : <Sparkles className="w-3 h-3 text-amber-500" />}
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {isTyping && (
-            <div className="flex items-center gap-2 text-zinc-400 text-xs bg-white p-3 rounded-xl border border-zinc-200 w-fit">
-              <Sparkles className="w-3.5 h-3.5 text-hitchOrange animate-spin" />
-              <span>Claude 3.5 Sonnet is thinking</span>
-              <span className="flex gap-0.5">
-                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </span>
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="p-3 bg-white border-t border-zinc-200 shrink-0">
-          <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-2">
-            <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-            <button type="button" onClick={() => fileInputRef.current?.click()}
-              title="Upload parcel photo for Bedrock visual inspection"
-              className="p-2.5 rounded-xl border border-zinc-200 hover:border-hitchOrange hover:bg-orange-50 text-zinc-500 hover:text-hitchOrange transition-all shrink-0">
-              <Upload className="w-4 h-4" />
-            </button>
-            <input type="text" value={input} onChange={e => setInput(e.target.value)}
-              placeholder="Ask about packaging, prohibited items, weight limits..."
-              className="flex-1 px-3.5 py-2.5 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
-              disabled={isTyping} />
-            <button type="submit" disabled={isTyping || !input.trim()}
-              className="p-2.5 bg-hitchOrange text-white rounded-xl hover:bg-hitchOrange-hover transition-all shadow-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Request snapshot sidebar
 function RequestSnapshot({ step, form, selectedCarrier, onOpenAdvisor }) {
   const isComplete = form.category && form.weightKg > 0 && form.fromCity && form.toCity && form.recipientName;
@@ -655,8 +420,8 @@ function RequestSnapshot({ step, form, selectedCarrier, onOpenAdvisor }) {
 
         <div className="pt-2 border-t border-zinc-100">
           <button onClick={onOpenAdvisor}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-zinc-900 to-zinc-800 text-white rounded-xl text-xs font-semibold hover:bg-zinc-700 shadow-sm transition-all">
-            <Sparkles className="w-3.5 h-3.5 text-hitchOrange" /> Bedrock Packaging Advisor
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-500/20 transition-all">
+            <Sparkles className="w-3.5 h-3.5 animate-spin" /> Ask Hitch AI
           </button>
         </div>
       </div>
@@ -779,13 +544,13 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "home") return (
     <div className="space-y-10 animate-fadeIn relative">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
-      <FloatingBedrockAdvisor isOpen={isAdvisorOpen} onClose={() => setIsAdvisorOpen(false)} form={form} setForm={setForm} />
+      <AskHitchAIModal isOpen={isAdvisorOpen} onClose={() => setIsAdvisorOpen(false)} packageContext={{ category: form.category, weight: form.weightKg, mode: selectedCarrier?.mode || "train" }} />
 
       {/* Floating AI Trigger Button */}
       <button onClick={() => setIsAdvisorOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full shadow-2xl border border-zinc-700 transition-all hover:scale-105">
-        <Sparkles className="w-4 h-4 text-hitchOrange animate-spin" />
-        <span className="text-xs font-bold">Ask Bedrock Packaging AI</span>
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full shadow-2xl shadow-orange-500/30 border border-white/20 transition-all hover:scale-105 cursor-pointer">
+        <Sparkles className="w-4 h-4 text-white animate-spin" />
+        <span className="text-xs font-bold tracking-wide">Ask Hitch AI</span>
       </button>
 
       {/* Hero split layout */}
@@ -951,7 +716,7 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
   if (screen === "create") return (
     <div className="animate-fadeIn">
       <RegulatoryLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} form={form} trackingId={createdTrackingId} />
-      <FloatingBedrockAdvisor isOpen={isAdvisorOpen} onClose={() => setIsAdvisorOpen(false)} form={form} setForm={setForm} />
+      <AskHitchAIModal isOpen={isAdvisorOpen} onClose={() => setIsAdvisorOpen(false)} packageContext={{ category: form.category, weight: form.weightKg, mode: selectedCarrier?.mode || "train" }} />
 
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -962,8 +727,8 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
           </p>
         </div>
         <button onClick={() => setIsAdvisorOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all">
-          <Sparkles className="w-3.5 h-3.5 text-hitchOrange" /> Bedrock AI Packaging Advisor
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-500/20 transition-all">
+          <Sparkles className="w-3.5 h-3.5 animate-spin" /> Ask Hitch AI
         </button>
       </div>
 
