@@ -77,20 +77,16 @@ export default function DigitalPassModal({ isOpen, onClose, shipment }) {
           <div className="p-6 bg-[#FAFAF8] space-y-5">
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
-                <p className="text-[10px] font-bold uppercase text-zinc-400">Carrier / Commuter</p>
-                <p className="font-bold text-zinc-900 text-sm mt-0.5">
-                  {shipment.carrier ? `${shipment.carrier.split(" ")[0]} ${shipment.carrier.split(" ")[1]?.[0] || ""}.` : "Verified Regular"}
-                </p>
-                <p className="text-[10px] text-zinc-500">{shipment.transportName || "Trunk Corridor Commuter"}</p>
+                <p className="text-[10px] font-bold uppercase text-zinc-400">Carrier Verification</p>
+                <p className="font-bold text-zinc-900 text-sm mt-0.5">Verified Commuter</p>
+                <p className="text-[10px] text-zinc-500">Authenticated Luggage Traveler</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase text-zinc-400">Recipient</p>
-                <p className="font-bold text-zinc-900 text-sm mt-0.5">
-                  {shipment.recipient ? `${shipment.recipient.split(" ")[0]} ${shipment.recipient.split(" ")[1]?.[0] || ""}.` : "Verified Recipient"}
-                </p>
-                <p className="text-[10px] font-mono text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                <p className="text-[10px] font-bold uppercase text-zinc-400">Recipient Verification</p>
+                <p className="font-bold text-zinc-900 text-sm mt-0.5">Authenticated Recipient</p>
+                <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
                   <ShieldCheck className="w-3 h-3 text-emerald-600 inline" />
-                  +91 98*** **210 (Masked Relay)
+                  Dual-OTP Escrow Verified
                 </p>
               </div>
             </div>
