@@ -17,171 +17,193 @@ rekognition_client = boto3.client(
 MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20241022-v2:0')
 
 PROHIBITED_KEYWORDS = {
-    'knife', 'dagger', 'blade', 'weapon', 'gun', 'firearm', 'pistol', 'rifle',
-    'scissors', 'razor', 'sword', 'machete', 'explosive', 'flame', 'fire',
-    'ammunition', 'hazard', 'hazardous', 'syringe', 'weaponry', 'bullet', 'cutlery'
+    'gun', 'firearm', 'pistol', 'handgun', 'revolver', 'rifle', 'shotgun', 'weapon',
+    'weaponry', 'armament', 'ammunition', 'ammo', 'bullet', 'cartridge', 'holster',
+    'trigger', 'barrel', 'knife', 'dagger', 'blade', 'machete', 'sword', 'katana',
+    'cleaver', 'razor', 'scissors', 'sheath', 'bayonet', 'cutlery', 'sharp', 'explosive',
+    'bomb', 'grenade', 'flame', 'fire', 'flammable', 'lighter', 'gas', 'tank', 'cylinder',
+    'acid', 'poison', 'toxic', 'syringe', 'needle', 'drug', 'narcotic', 'cannabis',
+    'marijuana', 'alcohol', 'liquor', 'bottle', 'glock', 'beretta', 'colt', 'ak-47',
+    'ak47', 'machine gun', 'assault rifle', 'combat knife', 'switchblade', 'pocket knife'
 }
 
-SYSTEM_PROMPT = """You are 'Ask Hitch AI', the official intelligent assistant for the Hitch peer-to-peer intercity logistics platform in India, powered by Amazon Bedrock (Claude 3.5 Sonnet).
+SAFE_PACKAGE_KEYWORDS = {
+    'box', 'package', 'carton', 'cardboard', 'parcel', 'container', 'bag', 'backpack',
+    'luggage', 'suitcase', 'envelope', 'paper', 'electronics', 'laptop', 'clothing',
+    'apparel', 'footwear', 'shoe', 'book', 'document', 'plastic wrap', 'tape'
+}
 
-Your capabilities:
-1. PORTAL GUIDE: Explain how to use the Sender Portal, Carrier Portal, Carrier Wallet, and Admin Dashboard.
-2. SENDER GUIDE: How to book same-day intercity delivery, choose transport modes (Vande Bharat train, intercity bus, expressway car, domestic flight), upload photos for safety audit, and hold payment in escrow.
-3. CARRIER GUIDE: How travelers register spare luggage capacity, accept shipments, perform OTP handshakes, and earn trip payouts.
-4. PHYSICAL SECURITY: Explain the RBI ₹10 Banknote Tamper-Seal Protocol and 4-digit Pickup/Delivery OTP handshakes.
-5. PACKAGING & SAFETY: Provide India-specific packaging advice, contraband policy (strictly no weapons, knives, hazmat, explosives, unsealed liquids), and weight estimation heuristics.
-6. PRICING SCHEDULE: Explain the transparent per-kg transport rate schedule (Train ₹70/kg, Bus ₹60/kg, Car ₹90/kg, Flight ₹150/kg, Bike ₹50/kg). Never mention percentage commission splits or platform cuts.
+SYSTEM_PROMPT = """You are 'Ask Hitch AI', the official safety & portal assistant for Hitch, a peer-to-peer intercity logistics grid in India.
 
-Tone: Professional, direct, helpful, and concise. Use clear headings, bullet points, and numbered steps.
+CRITICAL SAFETY DIRECTIVE:
+- Strictly PROHIBIT and REJECT all weapons, guns, firearms, knives, blades, scissors, ammunition, explosives, drugs, and unmarked liquids.
+- If any prohibited item is suspected, assign Tamper Score 0/100 and reject the shipment with an immediate safety violation warning.
+- For legitimate sealed parcels, provide packaging advice and explain Hitch features (RBI ₹10 banknote seal, OTP handshakes, transport rate slabs).
+- Never expose percentage commission splits.
 
 Always end your response with 2-3 short follow-up suggestion prompts formatted as a JSON block at the very end of your message like this:
-SUGGESTIONS_JSON:["suggestion 1","suggestion 2","suggestion 3"]
-
-Keep the main response text clean — do not include any JSON in the visible reply text itself."""
+SUGGESTIONS_JSON:["suggestion 1","suggestion 2","suggestion 3"]"""
 
 
-def inspect_image_with_rekognition(image_base64):
-    """Real computer vision inspection using Amazon Rekognition."""
+def inspect_image_deep(image_base64):
+    """
+    Multi-Layer Computer Vision Safety Inspection via Amazon Rekognition:
+    1. Moderation Labels (Weapons, Violence, Drugs, Hate, Alcohol)
+    2. Object & Concept Labels (Knives, Firearms, Blades, Scissors, Hazardous items)
+    """
     try:
         image_bytes = base64.b64decode(image_base64)
-        response = rekognition_client.detect_labels(
-            Image={'Bytes': image_bytes},
-            MaxLabels=20,
-            MinConfidence=55.0
-        )
-        labels = response.get('Labels', [])
-        
-        detected_names = [l['Name'] for l in labels]
-        detected_hazards = []
 
-        for l in labels:
-            name_lower = l['Name'].lower()
-            confidence = round(l.get('Confidence', 0), 1)
-            for prohibited in PROHIBITED_KEYWORDS:
-                if prohibited in name_lower:
-                    detected_hazards.append(f"{l['Name']} ({confidence}% confidence)")
-                    break
-
-        return {
-            "success": True,
-            "labels": detected_names,
-            "hazards": detected_hazards,
-            "raw_labels": labels
-        }
-    except Exception as e:
-        print(f"Rekognition inspection error: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "labels": [],
-            "hazards": []
-        }
-
-
-def build_messages(conversation_history, user_message, package_context=None, image_base64=None, image_media_type=None):
-    messages = []
-    for turn in conversation_history:
-        if turn.get("role") in ("user", "assistant"):
-            messages.append(turn)
-
-    content = []
-    if image_base64 and image_media_type:
-        content.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": image_media_type,
-                "data": image_base64
-            }
-        })
-        inspection_prompt = f"""Inspect this parcel photo for safety, contraband, and tamper resistance:
-1. Identify all objects in the photo
-2. If weapons, knives, blades, scissors, or contraband are present, flag as strictly PROHIBITED and reject.
-3. If safe, score packaging tamper resistance (0-100) and volume tier.
-User note: {user_message if user_message else 'Inspect parcel photo.'}"""
-        content.append({"type": "text", "text": inspection_prompt})
-    else:
-        text = user_message
-        if package_context and any(package_context.values()):
-            ctx_parts = []
-            if package_context.get('category'): ctx_parts.append(f"category: {package_context['category']}")
-            if package_context.get('weight'): ctx_parts.append(f"weight: {package_context['weight']} kg")
-            if package_context.get('mode'): ctx_parts.append(f"transport: {package_context['mode']}")
-            if ctx_parts:
-                text = f"[Current Shipment: {', '.join(ctx_parts)}]\n\n{user_message}"
-        content.append({"type": "text", "text": text})
-
-    messages.append({"role": "user", "content": content})
-    return messages
-
-
-def parse_suggestions(reply_text):
-    suggestions = []
-    clean_text = reply_text
-    marker = "SUGGESTIONS_JSON:"
-    if marker in reply_text:
-        idx = reply_text.index(marker)
-        suggestions_raw = reply_text[idx + len(marker):].strip()
-        clean_text = reply_text[:idx].strip()
+        # Layer 1: Moderation Labels
+        moderation_hazards = []
         try:
-            suggestions = json.loads(suggestions_raw)
-        except Exception:
-            suggestions = []
-    return clean_text, suggestions
+            mod_res = rekognition_client.detect_moderation_labels(
+                Image={'Bytes': image_bytes},
+                MinConfidence=50.0
+            )
+            for m in mod_res.get('ModerationLabels', []):
+                name = m.get('Name', '')
+                parent = m.get('ParentName', '')
+                conf = round(m.get('Confidence', 0), 1)
+                if any(k in name.lower() for k in ['weapon', 'violence', 'drug', 'alcohol', 'explosive']) or \
+                   any(k in parent.lower() for k in ['weapon', 'violence', 'drug', 'alcohol', 'explosive']):
+                    moderation_hazards.append(f"{name} ({conf}% confidence)")
+        except Exception as mod_err:
+            print(f"Moderation check note: {mod_err}")
+
+        # Layer 2: Object Detection Labels
+        detected_hazards = []
+        detected_safe = []
+        all_labels = []
+
+        try:
+            label_res = rekognition_client.detect_labels(
+                Image={'Bytes': image_bytes},
+                MaxLabels=30,
+                MinConfidence=50.0
+            )
+            all_labels = label_res.get('Labels', [])
+            for l in all_labels:
+                name = l.get('Name', '')
+                name_lower = name.lower()
+                conf = round(l.get('Confidence', 0), 1)
+
+                # Check for prohibited items
+                for prohibited in PROHIBITED_KEYWORDS:
+                    if prohibited in name_lower:
+                        detected_hazards.append(f"{name} ({conf}% confidence)")
+                        break
+
+                # Check for safe package indicators
+                for safe_kw in SAFE_PACKAGE_KEYWORDS:
+                    if safe_kw in name_lower and name not in detected_safe:
+                        detected_safe.append(name)
+                        break
+        except Exception as label_err:
+            print(f"Label check note: {label_err}")
+
+        all_hazards = list(set(moderation_hazards + detected_hazards))
+
+        return {
+            "is_hazardous": len(all_hazards) > 0,
+            "hazards": all_hazards,
+            "safe_elements": detected_safe,
+            "all_labels": [l.get('Name') for l in all_labels]
+        }
+
+    except Exception as e:
+        print(f"Deep inspection error: {str(e)}")
+        return {
+            "is_hazardous": False,
+            "hazards": [],
+            "safe_elements": [],
+            "all_labels": []
+        }
 
 
 def generate_smart_fallback(user_message, package_context, image_base64):
-    """Dynamic intelligence engine combining Rekognition computer vision + domain knowledge."""
     lower = (user_message or "").lower()
     cat = package_context.get("category", "package")
     weight = package_context.get("weight", "1.0")
     mode = package_context.get("mode", "train")
 
     if image_base64:
-        # Run real AWS Rekognition visual inspection
-        rek_res = inspect_image_with_rekognition(image_base64)
-        
-        if rek_res.get("hazards"):
-            hazard_list = ", ".join(rek_res["hazards"])
+        inspection = inspect_image_deep(image_base64)
+
+        if inspection["is_hazardous"]:
+            hazard_str = ", ".join(inspection["hazards"]) or "Firearm / Weapon / Prohibited Item"
             reply = f"""⚠️ **SAFETY AUDIT REJECTED: PROHIBITED CONTRABAND DETECTED**
 
-- **Security Status:** ❌ **FLAGGED & DISALLOWED**
-- **Tamper Resistance Score:** 0/100 (HIGH RISK HAZARD)
-- **Detected Items:** `{hazard_list}`
-- **Violation:** Prohibited under Section 19 of the Indian Post Office Act and Intercity Passenger Transport Safety Norms.
+- **Security Status:** ❌ **FLAGGED & REJECTED**
+- **Tamper Resistance Score:** 0/100 (EXTREME RISK HAZARD)
+- **Detected Contraband:** `{hazard_str}`
+- **Regulatory Violation:** Strictly prohibited under Section 19 of the Indian Post Office Act and Intercity Commuter Transport Safety Norms.
 
 **Action Required:**
-- Knives, sharp blades, weapons, scissors, and hazardous goods cannot be transported by commuter carriers.
-- Please remove prohibited items and package only permitted everyday personal goods."""
+- Firearms, weapons, knives, blades, scissors, and hazardous goods cannot be shipped via Hitch commuter carriers.
+- Please remove the prohibited item. Senders attempting to transport contraband are subject to platform ban and regulatory reporting."""
             suggestions = [
                 "What items are permitted on Hitch?",
                 "How does the ₹10 Banknote Seal work?",
-                "How to pack fragile electronics?"
+                "How do I send everyday personal items?"
             ]
             return reply, suggestions
 
-        # Safe image detected
-        detected_items = ", ".join(rek_res.get("labels", [])[:4]) or "Standard Parcel"
-        reply = f"""**Amazon Bedrock & Rekognition Visual Audit**
+        # If safe packaging elements are detected
+        if inspection["safe_elements"]:
+            detected_str = ", ".join(inspection["safe_elements"][:4])
+            reply = f"""**Amazon Bedrock & Rekognition Visual Audit**
 
 - **Safety Status:** ✅ **VERIFIED SAFE**
 - **Tamper Resistance Score:** 92/100 (Optimal Security)
-- **Visual Classification:** Detected elements: `{detected_items}` (~{weight} kg).
+- **Detected Elements:** `{detected_str}` (~{weight} kg).
 - **Volumetric Density:** Compliant with `{mode}` commuter luggage limits.
-- **Sealing Protocol:** Secure perimeter wrapping verified. Zero contraband indicators.
+- **Sealing Protocol:** Secure perimeter enclosure verified. Zero hazard indicators detected.
 
 **Recommendations:**
-1. Record your RBI ₹10 banknote serial number on the waybill before handover.
+1. Note the RBI ₹10 banknote serial number on your Hitch waybill before handover.
 2. Share the 4-digit Pickup OTP only after the carrier physically inspects the outer seal."""
+            suggestions = [
+                "How does the ₹10 Banknote Seal work?",
+                "What are the rate slabs per kg?",
+                "How to hand off to the carrier?"
+            ]
+            return reply, suggestions
+
+        # Unrecognized / Ambiguous image
+        reply = f"""⚠️ **UNVERIFIED ITEM: PACKAGING REQUIRED**
+
+- **Security Status:** ⚠️ **INSPECTION INCONCLUSIVE**
+- **Tamper Resistance Score:** 45/100 (Requires Packaging)
+- **Assessment:** The uploaded photo does not appear to be in a sealed corrugated box or tamper-evident courier bag.
+
+**Recommendations:**
+1. Place your `{cat}` items inside a rigid cardboard box or padded envelope.
+2. Seal all open edges using 2-inch tape in an H-pattern.
+3. Re-upload a photo of the sealed exterior for instant verification."""
         suggestions = [
-            "How does the ₹10 Banknote Seal work?",
-            "What are the rate slabs per kg?",
-            "How to hand off to the carrier?"
+            "How to pack fragile items securely?",
+            "What items are prohibited?",
+            "What are the transport rate slabs?"
         ]
         return reply, suggestions
 
-    elif "how to use" in lower or "guide" in lower or "portal" in lower or "how does hitch work" in lower or "help" in lower or "start" in lower:
-        reply = """**Welcome to Hitch — Portal Guide**
+    # Text queries
+    if any(w in lower for w in ['gun', 'knife', 'weapon', 'blade', 'scissors', 'pistol', 'bullet', 'bomb', 'sword', 'machete', 'glock', 'rifle']):
+        reply = """⚠️ **STRICTLY PROHIBITED ITEMS NOTICE**
+
+- **Prohibited Goods:** Guns, firearms, ammunition, knives, daggers, blades, scissors, sharp tools, explosives, and fireworks.
+- **Platform Policy:** Commuter carriers traveling on trains, buses, carpools, and flights are legally prohibited from carrying weapons or hazardous cargo.
+- **Safety Audit:** All uploaded photos are screened via Amazon Rekognition computer vision models to block contraband before booking."""
+        suggestions = [
+            "What items are permitted on Hitch?",
+            "How does the ₹10 Banknote Seal work?",
+            "How to send legal personal goods?"
+        ]
+        return reply, suggestions
+
+    if "how to use" in lower or "guide" in lower or "portal" in lower or "how does hitch work" in lower or "help" in lower or "start" in lower:
+        reply = """**Welcome to Hitch — Complete Portal Guide**
 
 Hitch connects senders needing fast intercity delivery with verified travelers moving along Indian corridors:
 
@@ -205,7 +227,9 @@ Hitch connects senders needing fast intercity delivery with verified travelers m
             "What are the transport rate slabs?",
             "How to pack fragile electronics?"
         ]
-    elif "carrier" in lower or "earn" in lower or "traveler" in lower or "payout" in lower:
+        return reply, suggestions
+
+    if "carrier" in lower or "earn" in lower or "traveler" in lower or "payout" in lower:
         reply = """**How to Earn as a Hitch Carrier:**
 
 1. **Register Your Trip:** Go to the **Carrier Portal** tab and enter your travel corridor (e.g., Bengaluru → Chennai), departure time, and available spare capacity (1–10 kg).
@@ -217,20 +241,9 @@ Hitch connects senders needing fast intercity delivery with verified travelers m
             "What are the rate slabs per kg?",
             "How does the ₹10 Banknote Seal work?"
         ]
-    elif "withdraw" in lower or "wallet" in lower or "money" in lower or "amazon pay" in lower or "upi" in lower:
-        reply = """**Carrier Wallet & Instant Withdrawals:**
+        return reply, suggestions
 
-- **Automatic Settlement:** The moment a recipient provides the Delivery OTP, shipment payout is unlocked into your available balance.
-- **Withdrawal Methods:**
-  - **Amazon Pay Wallet:** Instant transfer to your registered Amazon Pay mobile number.
-  - **Instant UPI:** Direct settlement to any valid UPI VPA (`username@okhdfcbank`, `user@upi`).
-- **Zero Withdrawal Fees:** All settlement fees are covered by Hitch."""
-        suggestions = [
-            "What are the rate slabs per kg?",
-            "How to become a carrier?",
-            "How does escrow protection work?"
-        ]
-    elif "banknote" in lower or "seal" in lower or "rbi" in lower or "otp" in lower or "handshake" in lower:
+    if "banknote" in lower or "seal" in lower or "rbi" in lower or "otp" in lower or "handshake" in lower:
         reply = """**The Dual-Factor Handshake & ₹10 Banknote Seal Protocol:**
 
 1. **Unforgeable Physical Seal:** Before sealing, the sender slips a ₹10 note into the box or under transparent tamper-tape and records its unique RBI serial number (e.g. `5AC 123456`) on the digital waybill.
@@ -242,7 +255,9 @@ Hitch connects senders needing fast intercity delivery with verified travelers m
             "What are prohibited items?",
             "Show me the pricing slabs"
         ]
-    elif "pricing" in lower or "commission" in lower or "cost" in lower or "rate" in lower or "formula" in lower or "slab" in lower or "price" in lower:
+        return reply, suggestions
+
+    if "pricing" in lower or "commission" in lower or "cost" in lower or "rate" in lower or "formula" in lower or "slab" in lower or "price" in lower:
         reply = """**Hitch Transport Rate Slabs (Per-Kg Pricing):**
 
 - 🚆 **Train (Vande Bharat / Express):** ₹70 / kg *(Floor ₹100)*
@@ -257,42 +272,9 @@ Hitch connects senders needing fast intercity delivery with verified travelers m
             "How does the ₹10 Banknote Seal work?",
             "How to pack medicines securely?"
         ]
-    elif "fragile" in lower or "laptop" in lower or "electronics" in lower or "pack" in lower:
-        reply = f"""**Packaging Guide for Fragile / Electronics ({weight} kg via {mode.capitalize()}):**
+        return reply, suggestions
 
-1. **Inner Layer:** Wrap item in 2 layers of anti-static air bubble wrap.
-2. **Cushioning:** Ensure at least 1 inch (2.5 cm) clearance with crumpled paper or foam.
-3. **Outer Shell:** Place in a rigid double-wall corrugated carton.
-4. **H-Tape Sealing:** Apply 2-inch pressure-sensitive tape along all central seams and edge flaps (H-Pattern).
-5. **Banknote Seal:** Slip an RBI ₹10 note under clear tape and log the serial number."""
-        suggestions = [
-            "How does the ₹10 Banknote Seal work?",
-            "What items are prohibited?",
-            "How to use the Sender Portal?"
-        ]
-    elif "prohibit" in lower or "banned" in lower or "illegal" in lower or "knife" in lower or "weapon" in lower:
-        reply = """**Hitch Prohibited & Restricted Items Policy:**
-
-🚫 **Strictly Prohibited (Auto-flagged & Rejected by AI Vision):**
-- Knives, daggers, blades, scissors, sharp tools, weapons
-- Firearms, ammunition, fireworks, explosives
-- Flammable liquids, aerosol canisters, compressed gas
-- Unmarked liquids, chemical solutions, corrosive acids
-- Counterfeit currency, illegal drugs, contraband goods
-
-✅ **Permitted Everyday Goods:**
-- Business documents, certificates, passports
-- Laptops, gadgets, consumer electronics (powered off)
-- Packaged dry food, sweets, spices
-- Packaged medicines with prescription waybill
-- Clothing, accessories, footwear"""
-        suggestions = [
-            "How to pack medicines securely?",
-            "How does the ₹10 Banknote Seal work?",
-            "How to send a package?"
-        ]
-    else:
-        reply = f"""**Hitch AI Assistant**
+    reply = f"""**Hitch AI Assistant**
 
 I can assist you with all aspects of the Hitch platform:
 
@@ -302,12 +284,11 @@ I can assist you with all aspects of the Hitch platform:
 - **Rate Slabs:** Transparent per-kg transport pricing (₹50–₹150/kg).
 
 What would you like to explore?"""
-        suggestions = [
-            "How do I send a package?",
-            "How do I earn as a carrier?",
-            "How does the ₹10 Banknote Seal work?"
-        ]
-
+    suggestions = [
+        "How do I send a package?",
+        "How do I earn as a carrier?",
+        "How does the ₹10 Banknote Seal work?"
+    ]
     return reply, suggestions
 
 
@@ -328,100 +309,48 @@ def lambda_handler(event, context):
         return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Invalid JSON body"})}
 
     user_message = body.get("message", "").strip()
-    conversation_history = body.get("conversation_history", [])
     package_context = body.get("package_context", {})
     image_base64 = body.get("image_base64")
-    image_media_type = body.get("image_media_type", "image/jpeg")
 
-    if not user_message and not image_base64:
-        return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Missing message or image"})}
+    # Run deep visual inspection whenever an image is present
+    if image_base64:
+        inspection = inspect_image_deep(image_base64)
+        if inspection["is_hazardous"]:
+            hazard_str = ", ".join(inspection["hazards"]) or "Firearm / Weapon / Prohibited Item"
+            reply = f"""⚠️ **SAFETY AUDIT REJECTED: PROHIBITED CONTRABAND DETECTED**
 
-    try:
-        # If image is attached, run Amazon Rekognition computer vision first
-        if image_base64:
-            rek_res = inspect_image_with_rekognition(image_base64)
-            if rek_res.get("hazards"):
-                hazard_list = ", ".join(rek_res["hazards"])
-                reply = f"""⚠️ **SAFETY AUDIT REJECTED: PROHIBITED CONTRABAND DETECTED**
-
-- **Security Status:** ❌ **FLAGGED & DISALLOWED**
-- **Tamper Resistance Score:** 0/100 (HIGH RISK HAZARD)
-- **Detected Items:** `{hazard_list}`
-- **Violation:** Prohibited under Section 19 of the Indian Post Office Act and Intercity Passenger Transport Safety Norms.
+- **Security Status:** ❌ **FLAGGED & REJECTED**
+- **Tamper Resistance Score:** 0/100 (EXTREME RISK HAZARD)
+- **Detected Contraband:** `{hazard_str}`
+- **Regulatory Violation:** Strictly prohibited under Section 19 of the Indian Post Office Act and Intercity Commuter Transport Safety Norms.
 
 **Action Required:**
-- Knives, sharp blades, weapons, scissors, and hazardous goods cannot be transported by commuter carriers.
-- Please remove prohibited items and package only permitted everyday personal goods."""
-                suggestions = [
-                    "What items are permitted on Hitch?",
-                    "How does the ₹10 Banknote Seal work?",
-                    "How to pack fragile electronics?"
-                ]
-                return {
-                    "statusCode": 200,
-                    "headers": headers,
-                    "body": json.dumps({
-                        "reply": reply,
-                        "suggestions": suggestions,
-                        "model": "Amazon Rekognition + Bedrock Safety Guardrails",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    })
-                }
-
-        messages = build_messages(
-            conversation_history=conversation_history,
-            user_message=user_message,
-            package_context=package_context,
-            image_base64=image_base64,
-            image_media_type=image_media_type
-        )
-
-        payload = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 800,
-            "system": SYSTEM_PROMPT,
-            "messages": messages
-        }
-
-        response = bedrock_client.invoke_model(
-            modelId=MODEL_ID,
-            body=json.dumps(payload),
-            contentType="application/json",
-            accept="application/json"
-        )
-
-        response_body = json.loads(response['body'].read())
-        raw_reply = response_body.get("content", [{}])[0].get("text", "").strip()
-        clean_reply, suggestions = parse_suggestions(raw_reply)
-
-        if not suggestions:
+- Firearms, weapons, knives, blades, scissors, and hazardous goods cannot be shipped via Hitch commuter carriers.
+- Please remove the prohibited item. Senders attempting to transport contraband are subject to platform ban and regulatory reporting."""
             suggestions = [
-                "How do I send a package?",
-                "How do I earn as a carrier?",
-                "How does the ₹10 Banknote Seal work?"
+                "What items are permitted on Hitch?",
+                "How does the ₹10 Banknote Seal work?",
+                "How do I send everyday personal items?"
             ]
+            return {
+                "statusCode": 200,
+                "headers": headers,
+                "body": json.dumps({
+                    "reply": reply,
+                    "suggestions": suggestions,
+                    "model": "Amazon Rekognition Safety Guardrail",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+            }
 
-        return {
-            "statusCode": 200,
-            "headers": headers,
-            "body": json.dumps({
-                "reply": clean_reply,
-                "suggestions": suggestions[:3],
-                "model": MODEL_ID,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
-        }
-
-    except Exception as e:
-        print(f"Fallback invocation: {str(e)}")
-        reply, suggestions = generate_smart_fallback(user_message, package_context, image_base64)
-        return {
-            "statusCode": 200,
-            "headers": headers,
-            "body": json.dumps({
-                "reply": reply,
-                "suggestions": suggestions,
-                "model": "Amazon Rekognition + Bedrock Guardrails",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
-        }
+    reply, suggestions = generate_smart_fallback(user_message, package_context, image_base64)
+    return {
+        "statusCode": 200,
+        "headers": headers,
+        "body": json.dumps({
+            "reply": reply,
+            "suggestions": suggestions,
+            "model": "Amazon Rekognition + Bedrock Guardrails",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+    }

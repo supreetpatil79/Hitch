@@ -118,6 +118,10 @@ export default function AskHitchAIModal({ isOpen, onClose, packageContext = {} }
     setIsTyping(true);
 
     try {
+      const fileNameLower = file.name.toLowerCase();
+      const weaponKeywords = ['gun', 'knife', 'weapon', 'blade', 'pistol', 'rifle', 'bullet', 'bomb', 'glock', 'revolver', 'dagger', 'scissors', 'sharp', 'machete', 'sword'];
+      const hasWeaponName = weaponKeywords.some(kw => fileNameLower.includes(kw));
+
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(",")[1]);
@@ -125,23 +129,24 @@ export default function AskHitchAIModal({ isOpen, onClose, packageContext = {} }
         reader.readAsDataURL(file);
       });
       const mediaType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      
       const data = await callBedrockChat({
-        userMessage: "Inspect this parcel photo for safety and packaging compliance.",
+        userMessage: hasWeaponName ? `[CRITICAL INSPECTION - POTENTIAL HAZARD: ${file.name}] Inspect parcel photo for weapons, contraband, and tamper resistance.` : "Inspect this parcel photo for safety and packaging compliance.",
         imageBase64: base64,
         imageMediaType: mediaType
       });
 
       setConversationHistory(prev => [
         ...prev,
-        { role: "user", content: [{ type: "text", text: `[Image: ${file.name}]` }] },
+        { role: "user", content: [{ type: "text", text: `[Uploaded Image: ${file.name}]` }] },
         { role: "assistant", content: [{ type: "text", text: data.reply }] },
       ]);
       addBotMessage(data.reply, data.suggestions || []);
     } catch (err) {
       console.error("Photo inspection error:", err);
       addBotMessage(
-        "Could not inspect photo via Bedrock right now. Please try again or ask any packaging question.",
-        ["How to pack fragile electronics?", "How does the ₹10 Banknote Seal work?"]
+        "Could not inspect photo right now. Please ensure your parcel is placed in a secure, opaque corrugated box before booking.",
+        ["What items are prohibited?", "How does the ₹10 Banknote Seal work?"]
       );
     } finally {
       setIsTyping(false);
