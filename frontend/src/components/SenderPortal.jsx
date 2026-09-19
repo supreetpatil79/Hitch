@@ -709,40 +709,97 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
       <LiveTicker />
 
       {/* Real-time Shipments Carousel */}
-      <div className="pt-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="pt-6 sm:pt-8">
+        <div className="flex items-end justify-between mb-5">
           <div>
-            <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-              <span>Active Platform Shipments</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </h3>
-            <p className="text-xs text-zinc-500">Real-time status synced with carrier OTP handshakes</p>
-          </div>
-          <span className="text-xs font-semibold text-hitchOrange">{shipments?.length || 3} Active</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(shipments || []).map(s => (
-            <div key={s.id} className="bg-white rounded-2xl border border-zincBorder shadow-sm p-5 hover:shadow-md transition-all space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded">{s.id}</span>
-                <span className={"text-[10px] font-bold px-2.5 py-0.5 rounded-full border " + (STATUS_STYLE[s.status] || "bg-zinc-100 text-zinc-600")}>
-                  {s.status.replace(/_/g, " ")}
-                </span>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 text-sm font-bold text-zinc-900">
-                  <MapPin className="w-3.5 h-3.5 text-hitchOrange shrink-0" /> {s.from}
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-zinc-500 ml-5">
-                  <ArrowRight className="w-3 h-3" /> {s.to}
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-100 pt-3">
-                <span>{s.weight} kg · {s.category}</span>
-                <span className="font-bold text-hitchOrange">₹{s.payout}</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Active Shipments</h3>
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
             </div>
-          ))}
+            <p className="text-xs text-zinc-400 mt-0.5">Real-time corridor telemetry &amp; OTP handshakes</p>
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-medium text-zinc-600 bg-white border border-zinc-200/80 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-hitchOrange" />
+            {shipments?.length || 3} Active Dispatches
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(shipments || []).map(s => {
+            const isDelivered = s.status === "DELIVERED";
+            const isInTransit = s.status === "IN_TRANSIT";
+            return (
+              <div
+                key={s.id}
+                className="group relative bg-white/90 hover:bg-white rounded-2xl border border-zinc-200/70 hover:border-zinc-300 p-5 shadow-2xs hover:shadow-lg hover:shadow-zinc-900/5 transition-all duration-300 flex flex-col justify-between"
+              >
+                {/* Top header: ID & Status */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="font-mono text-[11px] font-bold text-zinc-500 bg-zinc-100/80 px-2 py-0.5 rounded-md border border-zinc-200/50 tracking-wider">
+                      {s.id}
+                    </span>
+                    <span
+                      className={
+                        "inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border " +
+                        (isDelivered
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
+                          : isInTransit
+                          ? "bg-orange-50 text-orange-700 border-orange-200/70"
+                          : "bg-blue-50 text-blue-700 border-blue-200/70")
+                      }
+                    >
+                      <span
+                        className={
+                          "w-1.5 h-1.5 rounded-full " +
+                          (isDelivered
+                            ? "bg-emerald-500"
+                            : isInTransit
+                            ? "bg-hitchOrange animate-pulse"
+                            : "bg-blue-500 animate-pulse")
+                        }
+                      />
+                      {s.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  {/* Route corridor with hairline connector */}
+                  <div className="my-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-base font-bold text-zinc-900 tracking-tight">
+                        {s.from}
+                      </div>
+                      <div className="flex-1 flex items-center justify-center relative px-2">
+                        <div className="w-full h-px bg-zinc-200 group-hover:bg-orange-300 transition-colors" />
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-hitchOrange absolute bg-white px-0.5 transition-colors" />
+                      </div>
+                      <div className="text-base font-bold text-zinc-900 tracking-tight">
+                        {s.to}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-1 flex items-center justify-between font-medium">
+                      <span>Carrier: {s.carrier || "Verified Regular"}</span>
+                      <span>{s.eta || "Today"}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom metadata */}
+                <div className="flex items-center justify-between text-xs border-t border-zinc-100 pt-3 mt-3">
+                  <span className="text-zinc-500 font-medium">
+                    {s.weight} kg · <span className="capitalize">{s.category}</span>
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-zinc-400 font-medium uppercase">Fare</span>
+                    <span className="text-sm font-bold text-zinc-900">₹{s.payout}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
