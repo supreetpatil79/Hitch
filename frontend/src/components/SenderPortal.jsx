@@ -807,28 +807,34 @@ export default function SenderPortal({ shipments, activeShipmentId, onAddShipmen
       <ScrollTagline />
 
       {/* How it works */}
-      <div className="pt-6 pb-6">
+      <div className="pt-8 pb-12">
         <div className="text-center mb-10">
-          <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">How it works</span>
-          <h2 className="text-3xl font-bold text-zinc-900 mt-2">
-            Send in 4 steps. <span className="font-display italic text-hitchOrange">Simple.</span>
+          <span className="text-[11px] font-mono font-bold uppercase tracking-[0.2em] text-zinc-400">Workflow</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 mt-2 tracking-tight">
+            Send in 4 steps. <span className="font-display italic font-normal text-hitchOrange">Simple.</span>
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {HOW_IT_WORKS.map(item => {
+          {HOW_IT_WORKS.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div key={item.n} className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 space-y-4 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 text-hitchOrange flex items-center justify-center">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-zinc-300">{item.n}</span>
-                </div>
+              <div
+                key={item.n}
+                className="group bg-white/90 hover:bg-white rounded-2xl border border-zinc-200/70 hover:border-zinc-300 p-6 space-y-4 shadow-2xs hover:shadow-lg hover:shadow-zinc-900/5 transition-all duration-300 flex flex-col justify-between"
+              >
                 <div>
-                  <p className="font-bold text-zinc-900 text-sm">{item.title}</p>
-                  <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{item.desc}</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50/80 border border-orange-100/60 text-hitchOrange flex items-center justify-center transition-transform group-hover:scale-105">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-mono text-xs font-bold text-zinc-300 group-hover:text-hitchOrange transition-colors">
+                      {item.n}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-zinc-900 text-sm tracking-tight">{item.title}</h3>
+                  <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed font-normal">{item.desc}</p>
                 </div>
+                <div className="h-0.5 w-full bg-zinc-100 group-hover:bg-orange-200 transition-colors rounded-full" />
               </div>
             );
           })}

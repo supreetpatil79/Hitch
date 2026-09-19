@@ -268,14 +268,26 @@ export default function App() {
         })}
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-zincBorder py-5 mb-16 md:mb-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
-          <span>Hitch Technology Platform · Section 79 IT Act 2000 · 173 Cities · Peer-to-Peer Intercity Logistics</span>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            {["Bedrock","Step Functions","S3","DynamoDB","API Gateway","Lambda","Amplify","SAM","Amazon Pay"].map(s => (
-              <span key={s} className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full border border-zinc-200 font-semibold text-[10px]">AWS {s}</span>
-            ))}
+      {/* Minimalist Footer */}
+      <footer className="bg-white/70 backdrop-blur-md border-t border-zinc-200/60 py-6 mb-16 md:mb-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-400">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <span className="font-bold text-zinc-700 tracking-tight">Hitch Logistics</span>
+            <span className="hidden sm:inline-block text-zinc-300">·</span>
+            <span>Section 79 IT Act 2000 Compliant</span>
+            <span className="hidden sm:inline-block text-zinc-300">·</span>
+            <span>173 Connected Cities</span>
+          </div>
+          <div className="font-mono text-[10px] text-zinc-400 tracking-wider uppercase flex items-center gap-2 flex-wrap justify-center">
+            <span>AWS Bedrock</span>
+            <span className="text-zinc-300">·</span>
+            <span>Step Functions</span>
+            <span className="text-zinc-300">·</span>
+            <span>DynamoDB</span>
+            <span className="text-zinc-300">·</span>
+            <span>Lambda</span>
+            <span className="text-zinc-300">·</span>
+            <span>Amplify</span>
           </div>
         </div>
       </footer>
