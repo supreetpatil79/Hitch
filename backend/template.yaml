@@ -172,6 +172,32 @@ Resources:
             Method: POST
             ApiId: !Ref HitchApi
 
+  BedrockChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/bedrock_chat/
+      Handler: app.lambda_handler
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: anthropic.claude-3-5-sonnet-20241022-v2:0
+          BEDROCK_REGION: !Ref AWS::Region
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: "*"
+      Events:
+        ChatAdvisorApi:
+          Type: HttpApi
+          Properties:
+            Path: /chat/advisor
+            Method: POST
+            ApiId: !Ref HitchApi
+
   # ============================================================================
   # STEP FUNCTIONS STATE MACHINE
   # ============================================================================

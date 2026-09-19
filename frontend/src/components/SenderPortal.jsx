@@ -380,100 +380,142 @@ function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
     {
       id: 1,
       sender: "bot",
-      text: "👋 Hi! I'm your Amazon Bedrock Packaging Advisor (Claude 3.5 Sonnet). Ask me how to tamper-proof your parcel or upload a photo for instant vulnerability inspection!",
+      text: "Hi! I'm your Hitch Packaging Advisor, powered by Amazon Bedrock (Claude 3.5 Sonnet). Ask me anything about packing your parcel, tamper-proofing, or upload a photo for a real AI safety inspection.",
       time: "Just now",
       suggestions: [
-        "🛡️ How do I tamper-proof an electronics package?",
-        "💰 How does the ₹10 Banknote Seal work?",
-        "📸 Analyze my package photo"
+        "How do I tamper-proof an electronics package?",
+        "How does the ₹10 Banknote Seal work?",
+        "What counts as a prohibited item?"
       ]
     }
   ]);
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState([]);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
+
+  const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || "";
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const handleSend = (textToSend) => {
-    const query = textToSend || input;
-    if (!query.trim()) return;
+  const getPackageContext = () => ({
+    category: form?.category || null,
+    weight: form?.weightKg || null,
+    mode: form?.preferredMode || null,
+    from: form?.fromCity || null,
+    to: form?.toCity || null,
+  });
 
-    const userMsg = {
-      id: Date.now(),
-      sender: "user",
-      text: query,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+  const callBedrockChat = async ({ userMessage, imageBase64, imageMediaType }) => {
+    if (!CHAT_API_URL) throw new Error("VITE_CHAT_API_URL not configured");
+    const response = await fetch(CHAT_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: userMessage || "",
+        conversation_history: conversationHistory,
+        package_context: getPackageContext(),
+        image_base64: imageBase64 || null,
+        image_media_type: imageMediaType || null,
+      }),
+    });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  };
 
-    setMessages(prev => [...prev, userMsg]);
+  const addBotMessage = (text, suggestions = []) => {
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now() + 1,
+        sender: "bot",
+        text,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        suggestions,
+      },
+    ]);
+  };
+
+  const handleSend = async (textToSend) => {
+    const query = (textToSend || input).trim();
+    if (!query) return;
+
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), sender: "user", text: query, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    ]);
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      let botResponse = "";
-      let suggestions = [];
-
-      const lower = query.toLowerCase();
-      if (lower.includes("tamper-proof") || lower.includes("electronics") || lower.includes("pack")) {
-        botResponse = "📦 **Bedrock Tamper-Proofing Checklist:**\n\n1. **Inner Layer:** Wrap in anti-static bubble wrap (2 layers).\n2. **Double-Box:** Place in inner box, then outer carton with 1-inch void fill.\n3. **H-Tape Sealing:** Apply cross-filament tape over all box seams (H-pattern).\n4. **Sign the Seams:** Sign across the tape seam with permanent marker.\n5. **₹10 Banknote Seal:** Place a ₹10 note inside and record its serial code!";
-        suggestions = ["How does the ₹10 Banknote Seal work?", "Upload photo for Bedrock visual inspection"];
-      } else if (lower.includes("banknote") || lower.includes("seal") || lower.includes("serial")) {
-        botResponse = "🛡️ **The RBI ₹10 Banknote Seal Protocol:**\n\n- Every Indian banknote has a **unique serial number** (e.g. `5AC 123456`).\n- Slip a ₹10 note inside the package before taping.\n- Log the serial number into Hitch.\n- At drop-off, the recipient verifies the note matches. Unforgeable physical security!";
-        suggestions = ["Analyze my package photo", "How to pack fragile items?"];
-      } else if (lower.includes("photo") || lower.includes("analyze") || lower.includes("inspect")) {
-        botResponse = "📸 Please upload a photo of your packed parcel below. I'll inspect the seams, tape opacity, and assign a Tamper Resistance Score (0–100)!";
-        suggestions = ["Upload Photo Now", "How to pack fragile items?"];
-      } else {
-        botResponse = "💡 **Claude 3.5 Sonnet Tip:** Ensure all package joints are sealed with opaque tape, declared contents match your booking, and your recipient has their phone ready for the 4-digit Delivery OTP.";
-        suggestions = ["Upload package photo", "How to pack liquids/medicines?"];
-      }
-
-      setMessages(prev => [
+    try {
+      const data = await callBedrockChat({ userMessage: query });
+      setConversationHistory(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "bot",
-          text: botResponse,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestions
-        }
+        { role: "user", content: [{ type: "text", text: query }] },
+        { role: "assistant", content: [{ type: "text", text: data.reply }] },
       ]);
+      addBotMessage(data.reply, data.suggestions || []);
+    } catch (err) {
+      console.error("Bedrock chat error:", err);
+      addBotMessage(
+        "Having trouble reaching Amazon Bedrock right now. Check your network and try again.",
+        ["How to pack fragile items?", "What is the ₹10 Banknote Seal?"]
+      );
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const userMsg = {
-      id: Date.now(),
-      sender: "user",
-      text: `📸 Uploaded image: ${file.name}`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), sender: "user", text: `📸 ${file.name}`, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    ]);
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const mediaType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      const data = await callBedrockChat({ userMessage: "Inspect this parcel photo.", imageBase64: base64, imageMediaType: mediaType });
+      setConversationHistory(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "bot",
-          text: `🔍 **Bedrock Visual Inspection Complete!**\n\n- **Tamper Resistance Score:** 96/100 (HIGH SECURITY)\n- **Safety Status:** VERIFIED SAFE ✓\n- **Assessment:** Excellent cross-seam adhesion. Zero contraband indicators. Your compliance label unlocks upon checkout!`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestions: ["How does the ₹10 Banknote Seal work?", "How to safely hand off to carrier?"]
-        }
+        { role: "user", content: [{ type: "text", text: `[Image: ${file.name}]` }] },
+        { role: "assistant", content: [{ type: "text", text: data.reply }] },
       ]);
-    }, 1500);
+      addBotMessage(data.reply, data.suggestions || []);
+    } catch (err) {
+      console.error("Photo inspection error:", err);
+      addBotMessage(
+        "Could not process the image via Bedrock. Try again or describe your packaging and I'll advise manually.",
+        ["Describe my packaging", "How to seal fragile items?"]
+      );
+    } finally {
+      setIsTyping(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
+
+  const renderText = (text) =>
+    text.split("\n").map((line, i) => {
+      const parts = line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+        part.startsWith("**") && part.endsWith("**")
+          ? <strong key={j}>{part.slice(2, -2)}</strong>
+          : part
+      );
+      return <span key={i}>{parts}{i < text.split("\n").length - 1 && <br />}</span>;
+    });
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-end sm:justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-fadeIn">
@@ -481,15 +523,15 @@ function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
         {/* Header */}
         <div className="bg-gradient-to-r from-zinc-900 to-zinc-800 text-white p-4 flex items-center justify-between border-b border-zinc-700 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-hitchOrange/20 border border-hitchOrange/40 flex items-center justify-center text-hitchOrange font-bold text-sm">
-              <Sparkles className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-hitchOrange/20 border border-hitchOrange/40 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-hitchOrange" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold">Bedrock Packaging Advisor</h3>
-                <span className="text-[9px] font-mono bg-violet-900/80 text-violet-200 px-1.5 py-0.5 rounded border border-violet-700">Claude 3.5 Sonnet</span>
+                <h3 className="text-sm font-bold">Packaging Advisor</h3>
+                <span className="text-[9px] font-mono bg-violet-900/80 text-violet-200 px-1.5 py-0.5 rounded border border-violet-700">Claude 3.5 · Bedrock</span>
               </div>
-              <p className="text-[10px] text-zinc-400">AI-powered anti-tamper packing guide &amp; photo audit</p>
+              <p className="text-[10px] text-zinc-400">AI packing guide &amp; photo safety audit</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-all">
@@ -505,19 +547,21 @@ function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
                 (m.sender === "user"
                   ? "bg-hitchOrange text-white rounded-br-xs shadow-xs"
                   : "bg-white text-zinc-800 border border-zinc-200/80 rounded-bl-xs shadow-xs")}>
-                <p className="whitespace-pre-line leading-relaxed">{m.text}</p>
+                <p className="leading-relaxed">{m.sender === "bot" ? renderText(m.text) : m.text}</p>
                 <span className={"text-[9px] block text-right " + (m.sender === "user" ? "text-orange-100" : "text-zinc-400")}>{m.time}</span>
               </div>
-
               {m.suggestions && m.suggestions.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
                   {m.suggestions.map((s, idx) => (
-                    <button key={idx} onClick={() => {
-                        if (s.includes("Photo")) fileInputRef.current?.click();
+                    <button key={idx}
+                      onClick={() => {
+                        if (s.toLowerCase().includes("photo") || s.toLowerCase().includes("upload")) fileInputRef.current?.click();
                         else handleSend(s);
                       }}
                       className="text-[10px] font-medium bg-white text-zinc-700 border border-zinc-200 hover:border-hitchOrange hover:text-hitchOrange px-2.5 py-1 rounded-full shadow-xs transition-all flex items-center gap-1">
-                      {s.includes("Photo") ? <ImageIcon className="w-3 h-3 text-blue-500" /> : <Sparkles className="w-3 h-3 text-amber-500" />}
+                      {s.toLowerCase().includes("photo") || s.toLowerCase().includes("upload")
+                        ? <ImageIcon className="w-3 h-3 text-blue-500" />
+                        : <Sparkles className="w-3 h-3 text-amber-500" />}
                       {s}
                     </button>
                   ))}
@@ -529,25 +573,32 @@ function FloatingBedrockAdvisor({ isOpen, onClose, form, setForm }) {
           {isTyping && (
             <div className="flex items-center gap-2 text-zinc-400 text-xs bg-white p-3 rounded-xl border border-zinc-200 w-fit">
               <Sparkles className="w-3.5 h-3.5 text-hitchOrange animate-spin" />
-              <span>Claude 3.5 Sonnet is thinking...</span>
+              <span>Claude 3.5 Sonnet is thinking</span>
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </span>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Input bar */}
+        {/* Input */}
         <div className="p-3 bg-white border-t border-zinc-200 shrink-0">
           <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             <button type="button" onClick={() => fileInputRef.current?.click()}
-              title="Upload parcel photo for Bedrock inspection"
+              title="Upload parcel photo for Bedrock visual inspection"
               className="p-2.5 rounded-xl border border-zinc-200 hover:border-hitchOrange hover:bg-orange-50 text-zinc-500 hover:text-hitchOrange transition-all shrink-0">
               <Upload className="w-4 h-4" />
             </button>
             <input type="text" value={input} onChange={e => setInput(e.target.value)}
-              placeholder="Ask Bedrock how to securely pack your item..."
-              className="flex-1 px-3.5 py-2.5 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-hitchOrange/40" />
-            <button type="submit" className="p-2.5 bg-hitchOrange text-white rounded-xl hover:bg-hitchOrange-hover transition-all shadow-sm shrink-0">
+              placeholder="Ask about packaging, prohibited items, weight limits..."
+              className="flex-1 px-3.5 py-2.5 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-hitchOrange/40"
+              disabled={isTyping} />
+            <button type="submit" disabled={isTyping || !input.trim()}
+              className="p-2.5 bg-hitchOrange text-white rounded-xl hover:bg-hitchOrange-hover transition-all shadow-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
               <Send className="w-4 h-4" />
             </button>
           </form>
